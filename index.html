@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Scratcher Odds Ledger</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Barlow+Condensed:wght@600;700;800&display=swap');
+
+  :root{
+    --felt: #1F3D2E;
+    --felt-dark: #16302A;
+    --chalk: #F1EDE2;
+    --gold: #D8A84E;
+    --gold-dim: #8C7134;
+    --warn: #C1503B;
+    --good: #7FB69E;
+    --line: rgba(241,237,226,0.16);
+  }
+
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background: var(--felt);
+    background-image:
+      radial-gradient(circle at 15% 10%, rgba(216,168,78,0.06), transparent 40%),
+      radial-gradient(circle at 85% 90%, rgba(127,182,158,0.05), transparent 40%);
+    color: var(--chalk);
+    font-family: 'Space Mono', monospace;
+    padding: 28px 18px 60px;
+  }
+
+  .wrap{max-width: 880px; margin: 0 auto;}
+
+  /* Header: tote-board / ticket stub */
+  header{
+    position: relative;
+    border: 2px solid var(--gold-dim);
+    border-radius: 4px;
+    padding: 22px 26px;
+    margin-bottom: 22px;
+    background: linear-gradient(180deg, rgba(216,168,78,0.06), transparent);
+  }
+  header::before, header::after{
+    content:"";
+    position:absolute;
+    top:-2px; bottom:-2px;
+    width: 14px;
+    background-image: radial-gradient(circle, var(--felt) 5px, transparent 5.5px);
+    background-size: 14px 16px;
+    background-repeat: repeat-y;
+  }
+  header::before{ left: -8px; }
+  header::after{ right: -8px; }
+
+  .eyebrow{
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    letter-spacing: 0.22em;
+    font-size: 12px;
+    color: var(--gold);
+    text-transform: uppercase;
+  }
+  h1{
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 800;
+    font-size: 40px;
+    letter-spacing: 0.01em;
+    margin: 4px 0 8px;
+    color: var(--chalk);
+  }
+  .sub{
+    font-size: 12.5px;
+    line-height: 1.6;
+    color: rgba(241,237,226,0.72);
+    max-width: 640px;
+  }
+  .sub a{ color: var(--good); }
+
+  /* Form: betting-slip */
+  .slip{
+    border: 1px dashed var(--line);
+    border-radius: 4px;
+    padding: 18px 20px;
+    margin-bottom: 26px;
+  }
+  .slip h2{
+    font-family:'Barlow Condensed', sans-serif;
+    font-weight:700;
+    font-size:15px;
+    letter-spacing:0.14em;
+    text-transform:uppercase;
+    color: var(--gold);
+    margin: 0 0 14px;
+  }
+  .grid{
+    display:grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px,1fr));
+    gap: 12px;
+  }
+  label{
+    display:block;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(241,237,226,0.55);
+    margin-bottom: 5px;
+  }
+  input{
+    width:100%;
+    background: var(--felt-dark);
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    color: var(--chalk);
+    font-family:'Space Mono', monospace;
+    font-size: 13px;
+    padding: 8px 9px;
+  }
+  input:focus{ outline:none; border-color: var(--gold); }
+
+  .actions{ margin-top:16px; display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+  button{
+    font-family:'Barlow Condensed', sans-serif;
+    font-weight:700;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    font-size:13px;
+    border-radius: 3px;
+    padding: 10px 18px;
+    cursor:pointer;
+    border: 1px solid var(--gold-dim);
+    background: var(--gold);
+    color: var(--felt-dark);
+  }
+  button.secondary{
+    background:transparent;
+    color: var(--chalk);
+    border-color: var(--line);
+  }
+  button:hover{ filter: brightness(1.08); }
+  .err{ font-size:11.5px; color: var(--warn); margin-top:8px; min-height:14px; }
+  .err.good{ color: var(--good); }
+
+  /* Sort bar */
+  .sortbar{ display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px;}
+  .sortbar .label{ font-size:10.5px; letter-spacing:0.1em; text-transform:uppercase; color: rgba(241,237,226,0.5); }
+  .sortbar select{
+    background: var(--felt-dark); color: var(--chalk); border:1px solid var(--line);
+    font-family:'Space Mono', monospace; font-size:12.5px; padding:6px 8px; border-radius:3px;
+  }
+
+  /* Rows: ticket stubs */
+  .row{
+    position: relative;
+    display:grid;
+    grid-template-columns: 34px 52px 1fr auto auto auto 34px;
+    align-items:center;
+    gap: 14px;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    background: rgba(0,0,0,0.12);
+    clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 0 100%);
+  }
+  .thumb{
+    width: 52px; height: 52px;
+    border-radius: 3px;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    background: var(--felt-dark);
+    flex-shrink: 0;
+  }
+  .thumb img{ width:100%; height:100%; object-fit: cover; display:block; }
+  .thumb-fallback{
+    width:100%; height:100%;
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Barlow Condensed', sans-serif; font-weight:700; font-size:13px;
+    color: var(--gold-dim); background:
+      repeating-linear-gradient(45deg, rgba(216,168,78,0.08), rgba(216,168,78,0.08) 4px, transparent 4px, transparent 8px);
+  }
+  .rank{
+    font-family:'Barlow Condensed', sans-serif;
+    font-weight:800;
+    font-size: 22px;
+    color: var(--gold-dim);
+    text-align:center;
+  }
+  .row.best .rank{ color: var(--gold); }
+  .name{ font-size: 14px; }
+  .name .price{ display:block; font-size: 10.5px; color: rgba(241,237,226,0.5); margin-top:2px;}
+  .metric{ text-align:right; min-width: 92px; }
+  .metric .v{ font-size: 15px; font-weight:700; }
+  .metric .k{ font-size: 9px; letter-spacing:0.08em; text-transform:uppercase; color: rgba(241,237,226,0.45); display:block; margin-top:2px;}
+  .good{ color: var(--good); }
+  .warn{ color: var(--warn); }
+  .del{
+    background:transparent; border:none; color: rgba(241,237,226,0.4);
+    font-size:16px; cursor:pointer; padding:4px;
+  }
+  .del:hover{ color: var(--warn); }
+  .badge{
+    display:inline-block; font-size:8.5px; letter-spacing:0.08em; text-transform:uppercase;
+    background: var(--gold); color: var(--felt-dark); padding:2px 6px; border-radius:2px; margin-left:8px;
+    vertical-align: middle; font-family:'Barlow Condensed', sans-serif; font-weight:700;
+  }
+  .badge.low{ background: var(--warn); color: var(--chalk); }
+
+  .empty{
+    text-align:center; padding: 40px 20px; color: rgba(241,237,226,0.5); font-size:12.5px;
+    border: 1px dashed var(--line); border-radius:4px;
+  }
+
+  footer{
+    margin-top: 26px; font-size: 10.5px; line-height:1.7; color: rgba(241,237,226,0.45);
+    border-top: 1px solid var(--line); padding-top: 16px;
+  }
+  footer a{ color: var(--good); }
+
+  @media (max-width: 560px){
+    .row{ grid-template-columns: 24px 40px 1fr; row-gap:8px; }
+    .metric{ text-align:left; grid-column: 2 / -1; }
+    .rank{ font-size:14px; }
+    .thumb{ width:40px; height:40px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow">Texas &middot; Scratch-Off Tracker</div>
+    <h1>Scratcher Odds Ledger</h1>
+    <div class="sub">
+      Enter the numbers printed on each ticket (or from the official
+      <a href="https://www.texaslottery.com/export/sites/lottery/Games/Scratch_Offs/all.html" target="_blank" rel="noopener">Texas Lottery scratch-off list</a>)
+      to rank games by overall odds and see how depleted the top prize pool is. Saved to this browser automatically.
+    </div>
+  </header>
+
+  <div class="slip" id="sync-panel">
+    <h2>Sync data</h2>
+    <div class="sub" style="margin-bottom:12px;">
+      Ask Claude to "refresh the ledger" any time for a current snapshot, or send a photo of a ticket at the counter
+      and paste the JSON it gives you here. Matches are merged by game name &mdash; your own entries won't be lost.
+    </div>
+    <label>Paste snapshot JSON</label>
+    <textarea id="import-box" rows="4" style="width:100%; background:var(--felt-dark); border:1px solid var(--line); border-radius:3px; color:var(--chalk); font-family:'Space Mono',monospace; font-size:11.5px; padding:8px 9px;" placeholder='[{"name":"Example Game","price":10,"prize":250000,"remain":3,"total":5,"asOf":"2026-07-15"}]'></textarea>
+    <div class="actions">
+      <button id="import-btn">Import &amp; merge</button>
+      <button class="secondary" id="export-btn">Copy current data as JSON</button>
+    </div>
+    <div class="err" id="sync-msg"></div>
+
+    <div style="margin-top:16px; padding-top:14px; border-top:1px dashed var(--line);">
+      <label>Live data source URL (optional &mdash; e.g. a raw.githubusercontent.com JSON file from a daily-sync script)</label>
+      <input id="source-url" type="url" placeholder="https://raw.githubusercontent.com/you/repo/main/data.json">
+      <div class="actions">
+        <button id="save-source-btn">Save &amp; fetch now</button>
+        <button class="secondary" id="clear-source-btn">Remove</button>
+      </div>
+      <div class="err" id="source-msg"></div>
+    </div>
+  </div>
+
+  <div class="slip">
+    <h2>Add a ticket</h2>
+    <div class="grid">
+      <div>
+        <label>Game name</label>
+        <input id="f-name" type="text" placeholder="e.g. Ultimate Millions">
+      </div>
+      <div>
+        <label>Game # (for thumbnail)</label>
+        <input id="f-gamenum" type="number" min="1" step="1" placeholder="2613">
+      </div>
+      <div>
+        <label>Price ($)</label>
+        <input id="f-price" type="number" min="0" step="1" placeholder="20">
+      </div>
+      <div>
+        <label>Overall odds &mdash; 1 in ___ (optional)</label>
+        <input id="f-odds" type="number" min="1" step="0.01" placeholder="from back of ticket">
+      </div>
+      <div>
+        <label>Top prize ($)</label>
+        <input id="f-prize" type="number" min="0" step="1" placeholder="5000000">
+      </div>
+      <div>
+        <label>Top prizes remaining</label>
+        <input id="f-remain" type="number" min="0" step="1" placeholder="4">
+      </div>
+      <div>
+        <label>Top prizes total printed</label>
+        <input id="f-total" type="number" min="0" step="1" placeholder="6">
+      </div>
+      <div>
+        <label>As of (date)</label>
+        <input id="f-asof" type="date">
+      </div>
+    </div>
+    <div class="actions">
+      <button id="add-btn">Add to ledger</button>
+      <button class="secondary" id="clear-btn">Clear all</button>
+    </div>
+    <div class="err" id="form-err"></div>
+  </div>
+
+  <div class="sortbar">
+    <span class="label" id="count-label">0 games tracked</span>
+    <span>
+      <span class="label" style="margin-right:8px;">Sort by</span>
+      <select id="sort-select">
+        <option value="remain" selected>Top prizes remaining % (live)</option>
+        <option value="odds">Best overall odds</option>
+        <option value="prize">Top prize amount</option>
+        <option value="price">Ticket price</option>
+      </select>
+    </span>
+  </div>
+  <div class="sub" style="margin: -6px 0 16px;">Preloaded with the Texas Lottery's official "Prizes Claimed" snapshot from <strong>Jul 11, 2026</strong>. Add newer numbers any time &mdash; they'll sort right in.</div>
+
+  <div id="list"></div>
+
+  <footer>
+    <strong>Reading this ledger:</strong> "Overall odds" is the published chance of winning any prize — including
+    free tickets and breakeven prizes — averaged across every ticket printed for that game. It does not account for
+    prizes already claimed, and it isn't in the daily "prizes claimed" report, so most games here start with it
+    blank until you add it from the ticket back, a photo, or ask Claude to look up a specific game. "Top prizes
+    remaining %" is a separate, faster-updating signal — a rough proxy for whether a game is "played out" — but it
+    doesn't recalculate true odds, since it doesn't account for how many tickets are still unsold. Thumbnails are
+    pulled directly from Texas Lottery's own ticket images by game number; if one fails to load, the game number
+    is still shown so you can spot it in the store. Neither odds signal changes your chances on any individual
+    ticket, and past results never affect future draws. For live official numbers, check
+    <a href="https://www.texaslottery.com" target="_blank" rel="noopener">texaslottery.com</a> directly.
+    If scratch tickets stop feeling like entertainment, Texas offers free, confidential help through the
+    <a href="https://www.texaslottery.com/export/sites/lottery/Responsible_Gaming/index.html" target="_blank" rel="noopener">Council on Problem and Compulsive Gambling of Texas</a> (24/7: 1-800-522-4700).
+  </footer>
+
+</div>
+
+<script>
+const STORE_KEY = 'scratcher_games';
+let games = [];
+let sortMode = 'remain';
+
+// Snapshot pulled from texaslottery.com's official "Prizes Claimed" report, Jul 11, 2026.
+// Top-prize tier only (highest prize amount per game). Overall odds aren't published in
+// this daily report -- only on each game's individual page -- so most are blank here.
+// Verified via Texas Register filing where noted.
+const SEED_GAMES = [
+  {name:"200X The Cash (New)", gameNumber:2613, price:20, prize:1000000, remain:4, total:4, odds:3.41, asOf:"2026-07-11"},
+  {name:"$1,000,000 Crossword (New)", gameNumber:2753, price:20, prize:1000000, remain:6, total:6, asOf:"2026-07-11"},
+  {name:"Mega Cash!", gameNumber:2733, price:10, prize:250000, remain:5, total:5, asOf:"2026-07-11"},
+  {name:"Casino Millions", gameNumber:2689, price:50, prize:1000000, remain:8, total:10, odds:3.45, asOf:"2026-07-11"},
+  {name:"Airstream\u00ae Dream", gameNumber:2745, price:5, prize:100000, remain:4, total:5, asOf:"2026-07-11"},
+  {name:"King of Cash", gameNumber:2739, price:2, prize:30000, remain:4, total:5, asOf:"2026-07-11"},
+  {name:"Loteria Azul", gameNumber:2765, price:5, prize:100000, remain:4, total:5, asOf:"2026-07-11"},
+  {name:"$100,000 Cash", gameNumber:2577, price:5, prize:100000, remain:4, total:5, asOf:"2026-07-11"},
+  {name:"$1,000,000 Ca$h!", gameNumber:2744, price:20, prize:1000000, remain:3, total:4, odds:3.99, asOf:"2026-07-11"},
+  {name:"$5 Million Titanium Black", gameNumber:2627, price:100, prize:5000000, remain:3, total:4, odds:3.89, asOf:"2026-07-11"},
+  {name:"100X The Cash", gameNumber:2713, price:10, prize:500000, remain:3, total:4, odds:3.98, asOf:"2026-07-11"},
+  {name:"Mega Millionaire", gameNumber:2722, price:20, prize:1000000, remain:3, total:4, asOf:"2026-07-11"},
+  {name:"Millionaire's Club", gameNumber:2730, price:30, prize:2000000, remain:3, total:4, asOf:"2026-07-11"},
+  {name:"Cashword", gameNumber:2662, price:3, prize:50000, remain:9, total:13, asOf:"2026-07-11"},
+  {name:"Lucky No. 7", gameNumber:2622, price:2, prize:30000, remain:4, total:6, odds:4.33, asOf:"2026-07-11"},
+  {name:"30X The Cash Word Search", gameNumber:2711, price:3, prize:60000, remain:4, total:6, odds:4.39, asOf:"2026-07-11"},
+  {name:"$5 Million Royale", gameNumber:2624, price:50, prize:5000000, remain:2, total:4, odds:3.66, asOf:"2026-07-11"},
+  {name:"$5,000,000 Fortune", gameNumber:2665, price:100, prize:5000000, remain:2, total:4, odds:3.91, asOf:"2026-07-11"},
+  {name:"Loteria Supreme", gameNumber:2587, price:100, prize:7500000, remain:2, total:4, odds:3.23, asOf:"2026-07-11"},
+  {name:"500X", gameNumber:2589, price:50, prize:1000000, remain:2, total:15, odds:3.36, asOf:"2026-07-11"},
+  {name:"$20 Million Supreme", gameNumber:2400, price:100, prize:20000000, remain:0, total:4, odds:3.49, asOf:"2026-07-11"},
+  {name:"Lucky 7s Tripler", gameNumber:2723, price:5, prize:100000, remain:0, total:4, asOf:"2026-07-11"}
+].map(g => ({
+  id: 'seed-' + g.name.replace(/[^a-z0-9]/gi,'').toLowerCase(),
+  odds: null,
+  ...g
+}));
+
+function imgUrlFor(gameNumber){
+  return null; // texaslottery.com images are blocked by the artifact sandbox's CSP; see ticketSvg() instead
+}
+
+// Deterministic color from name, so each game gets a consistent (not random-per-render) hue
+function hueFor(str){
+  let h = 0;
+  for(let i=0;i<str.length;i++) h = (h * 31 + str.charCodeAt(i)) % 360;
+  return h;
+}
+
+function ticketSvg(g){
+  const hue = hueFor(g.name);
+  const label = g.prize >= 1000000 ? '$' + (g.prize/1000000).toFixed(g.prize % 1000000 === 0 ? 0 : 1) + 'M'
+              : g.prize >= 1000 ? '$' + Math.round(g.prize/1000) + 'K'
+              : ('$' + g.prize);
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="52" height="52" viewBox="0 0 52 52">
+    <rect width="52" height="52" rx="4" fill="hsl(${hue},38%,16%)"/>
+    <rect x="2" y="2" width="48" height="48" rx="3" fill="none" stroke="hsl(${hue},55%,55%)" stroke-width="1" stroke-dasharray="2,2"/>
+    <text x="26" y="23" font-family="monospace" font-size="10" fill="hsl(${hue},70%,75%)" text-anchor="middle" font-weight="bold">$${g.price}</text>
+    <text x="26" y="37" font-family="monospace" font-size="9.5" fill="#F1EDE2" text-anchor="middle" font-weight="bold">${label}</text>
+  </svg>`;
+  return 'data:image/svg+xml;base64,' + btoa(svg);
+}
+
+async function mergeSnapshot(incoming){
+  let updated = 0, added = 0, skipped = 0;
+  incoming.forEach(item => {
+    if(!item || !item.name || !(item.price >= 0)){ skipped++; return; }
+    const match = games.find(g => normName(g.name) === normName(item.name));
+    const clean = {
+      name: item.name,
+      gameNumber: (item.gameNumber === undefined || item.gameNumber === null || item.gameNumber === '') ? null : parseInt(item.gameNumber, 10),
+      price: item.price,
+      odds: (item.odds === undefined || item.odds === null || item.odds === '') ? null : parseFloat(item.odds),
+      prize: item.prize || 0,
+      remain: (item.remain === undefined || item.remain === null) ? null : parseFloat(item.remain),
+      total: (item.total === undefined || item.total === null) ? null : parseFloat(item.total),
+      asOf: item.asOf || null
+    };
+    if(match){ Object.assign(match, clean); updated++; }
+    else{ games.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2,6), ...clean }); added++; }
+  });
+  await save();
+  return {updated, added, skipped};
+}
+
+async function fetchFromSource(url, isAuto){
+  const msg = document.getElementById('source-msg');
+  try{
+    const res = await fetch(url, {cache: 'no-store'});
+    if(!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    if(!Array.isArray(data)) throw new Error('Expected a JSON array');
+    const {updated, added, skipped} = await mergeSnapshot(data);
+    render();
+    if(msg) { msg.className = 'err good'; msg.textContent = `Synced: ${added} added, ${updated} updated${skipped ? ', ' + skipped + ' skipped' : ''}.`; }
+  }catch(e){
+    if(msg) { msg.className = 'err'; msg.textContent = (isAuto ? 'Auto-sync failed: ' : 'Fetch failed: ') + e.message + '. Falling back to saved data.'; }
+  }
+}
+
+async function load(){
+  try{
+    const res = await window.storage.get(STORE_KEY);
+    games = res ? JSON.parse(res.value) : [];
+  }catch(e){ games = []; }
+
+  if(games.length === 0){
+    games = SEED_GAMES;
+    await save();
+  }else{
+    // Migration: backfill gameNumber/odds into existing saved entries that predate this feature,
+    // matched by name. User-entered remain/total/asOf are left untouched.
+    let migrated = false;
+    games.forEach(g => {
+      if(g.gameNumber === undefined){
+        const seed = SEED_GAMES.find(s => normName(s.name) === normName(g.name));
+        g.gameNumber = seed ? seed.gameNumber : null;
+        if(seed && (g.odds === null || g.odds === undefined) && seed.odds !== null){
+          g.odds = seed.odds;
+        }
+        migrated = true;
+      }
+    });
+    if(migrated) await save();
+  }
+  render();
+
+  try{
+    const src = await window.storage.get('scratcher_source_url');
+    if(src && src.value){
+      document.getElementById('source-url').value = src.value;
+      fetchFromSource(src.value, true);
+    }
+  }catch(e){ /* no source configured */ }
+}
+
+async function save(){
+  try{ await window.storage.set(STORE_KEY, JSON.stringify(games)); }
+  catch(e){ console.error('Storage save failed', e); }
+}
+
+function fmtMoney(n){
+  if(n >= 1000000) return '$' + (n/1000000).toFixed(n % 1000000 === 0 ? 0 : 1) + 'M';
+  if(n >= 1000) return '$' + (n/1000).toFixed(n % 1000 === 0 ? 0 : 1) + 'K';
+  return '$' + n.toLocaleString();
+}
+
+function render(){
+  document.getElementById('count-label').textContent =
+    games.length + (games.length === 1 ? ' game tracked' : ' games tracked');
+
+  const list = document.getElementById('list');
+  if(games.length === 0){
+    list.innerHTML = '<div class="empty">No tickets logged yet &mdash; add one above to start ranking.</div>';
+    return;
+  }
+
+  const withMetrics = games.map(g => {
+    const prob = g.odds ? 1 / g.odds : null; // higher = better overall odds
+    const remainPct = (g.total > 0) ? (g.remain / g.total) * 100 : null;
+    return {...g, prob, remainPct};
+  });
+
+  let sorted = [...withMetrics];
+  if(sortMode === 'odds') sorted.sort((a,b) => (b.prob ?? -1) - (a.prob ?? -1));
+  if(sortMode === 'remain') sorted.sort((a,b) => (b.remainPct ?? -1) - (a.remainPct ?? -1));
+  if(sortMode === 'prize') sorted.sort((a,b) => b.prize - a.prize);
+  if(sortMode === 'price') sorted.sort((a,b) => a.price - b.price);
+
+  const bestOddsId = [...withMetrics].filter(g=>g.prob!==null).sort((a,b) => b.prob - a.prob)[0]?.id;
+  const bestRemainId = [...withMetrics].filter(g=>g.remainPct!==null).sort((a,b) => b.remainPct - a.remainPct)[0]?.id;
+
+  list.innerHTML = sorted.map((g, i) => {
+    const isBestOdds = g.id === bestOddsId && sortMode === 'odds';
+    const isBestRemain = g.id === bestRemainId && sortMode === 'remain';
+    let remainBadge = '';
+    if(g.remainPct !== null){
+      if(g.remainPct === 0) remainBadge = '<span class="badge low">Top prize gone</span>';
+      else if(g.remainPct <= 15) remainBadge = '<span class="badge low">Running low</span>';
+      else if(g.remainPct >= 80) remainBadge = '<span class="badge">Fresh stock</span>';
+    }
+    return `
+      <div class="row ${(isBestOdds||isBestRemain) ? 'best' : ''}">
+        <div class="rank">${i+1}</div>
+        <div class="thumb"><img src="${ticketSvg(g)}" alt="${escapeHtml(g.name)}"></div>
+        <div class="name">${escapeHtml(g.name)}${isBestOdds ? '<span class="badge">Best odds</span>' : ''}${isBestRemain ? '<span class="badge">Freshest</span>' : ''}${remainBadge}
+          <span class="price">$${g.price} ticket${g.gameNumber ? ' &middot; Game #' + g.gameNumber : ''}${g.asOf ? ' &middot; as of ' + g.asOf : ''}
+            ${g.gameNumber ? `&middot; <a href="https://www.google.com/search?q=Texas+Lottery+${encodeURIComponent(g.name)}+${g.gameNumber}&tbm=isch" target="_blank" rel="noopener" style="color:var(--good);">see photo</a>` : ''}
+          </span>
+        </div>
+        <div class="metric">
+          <div class="v">${g.odds ? '1 in ' + g.odds : '&mdash;'}</div>
+          <div class="k">Overall odds</div>
+        </div>
+        <div class="metric">
+          <div class="v">${fmtMoney(g.prize)}</div>
+          <div class="k">Top prize</div>
+        </div>
+        <div class="metric">
+          <div class="v ${g.remainPct !== null ? (g.remainPct <= 15 ? 'warn' : 'good') : ''}">
+            ${g.remainPct !== null ? g.remainPct.toFixed(0) + '%' : '&mdash;'}
+          </div>
+          <div class="k">${g.remain ?? '?'}/${g.total ?? '?'} left</div>
+        </div>
+        <button class="del" data-id="${g.id}" title="Remove">&times;</button>
+      </div>
+    `;
+  }).join('');
+
+  list.querySelectorAll('.del').forEach(btn => {
+    btn.addEventListener('click', () => removeGame(btn.dataset.id));
+  });
+}
+
+function escapeHtml(s){
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+async function removeGame(id){
+  games = games.filter(g => g.id !== id);
+  await save();
+  render();
+}
+
+document.getElementById('add-btn').addEventListener('click', async () => {
+  const err = document.getElementById('form-err');
+  err.textContent = '';
+
+  const name = document.getElementById('f-name').value.trim();
+  const gameNumRaw = document.getElementById('f-gamenum').value;
+  const gameNumber = gameNumRaw === '' ? null : parseInt(gameNumRaw, 10);
+  const price = parseFloat(document.getElementById('f-price').value);
+  const oddsRaw = document.getElementById('f-odds').value;
+  const odds = oddsRaw === '' ? null : parseFloat(oddsRaw);
+  const prize = parseFloat(document.getElementById('f-prize').value) || 0;
+  const remain = document.getElementById('f-remain').value === '' ? null : parseFloat(document.getElementById('f-remain').value);
+  const total = document.getElementById('f-total').value === '' ? null : parseFloat(document.getElementById('f-total').value);
+  const asOf = document.getElementById('f-asof').value || null;
+
+  if(!name){ err.textContent = 'Enter a game name.'; return; }
+  if(!(price >= 0)){ err.textContent = 'Enter a valid ticket price.'; return; }
+  if(odds !== null && !(odds > 0)){ err.textContent = 'Overall odds should be a positive number, or leave it blank.'; return; }
+  if((remain !== null && total === null) || (remain === null && total !== null)){
+    err.textContent = 'Enter both "remaining" and "total printed" for top prizes, or leave both blank.';
+    return;
+  }
+  if(odds === null && remain === null){
+    err.textContent = 'Enter overall odds and/or top-prize remaining data \u2014 at least one is needed to rank this game.';
+    return;
+  }
+
+  games.push({
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2,6),
+    name, gameNumber, price, odds, prize,
+    remain: remain, total: total, asOf
+  });
+
+  await save();
+  render();
+
+  document.getElementById('f-name').value = '';
+  document.getElementById('f-gamenum').value = '';
+  document.getElementById('f-price').value = '';
+  document.getElementById('f-odds').value = '';
+  document.getElementById('f-prize').value = '';
+  document.getElementById('f-remain').value = '';
+  document.getElementById('f-total').value = '';
+  document.getElementById('f-asof').value = '';
+});
+
+document.getElementById('clear-btn').addEventListener('click', async () => {
+  if(games.length === 0) return;
+  if(confirm('Remove all tracked games from this ledger?')){
+    games = [];
+    await save();
+    render();
+  }
+});
+
+document.getElementById('sort-select').addEventListener('change', (e) => {
+  sortMode = e.target.value;
+  render();
+});
+
+function normName(s){ return (s||'').trim().toLowerCase(); }
+
+document.getElementById('import-btn').addEventListener('click', async () => {
+  const msg = document.getElementById('sync-msg');
+  msg.textContent = '';
+  msg.className = 'err';
+  const raw = document.getElementById('import-box').value.trim();
+  if(!raw){ msg.textContent = 'Paste a JSON snapshot first.'; return; }
+
+  let incoming;
+  try{ incoming = JSON.parse(raw); }
+  catch(e){ msg.textContent = 'That doesn\u2019t look like valid JSON \u2014 check for missing commas or brackets.'; return; }
+  if(!Array.isArray(incoming)){ msg.textContent = 'Expected a JSON array of games, e.g. [{"name":...}, ...]'; return; }
+
+  const {updated, added, skipped} = await mergeSnapshot(incoming);
+  render();
+  document.getElementById('import-box').value = '';
+  msg.className = 'err good';
+  msg.textContent = `Merged: ${added} added, ${updated} updated${skipped ? ', ' + skipped + ' skipped (missing name/price)' : ''}.`;
+});
+
+document.getElementById('save-source-btn').addEventListener('click', async () => {
+  const url = document.getElementById('source-url').value.trim();
+  const msg = document.getElementById('source-msg');
+  if(!url){ msg.className = 'err'; msg.textContent = 'Paste a URL first.'; return; }
+  await window.storage.set('scratcher_source_url', url);
+  msg.className = 'err good';
+  msg.textContent = 'Saved. Fetching now\u2026';
+  fetchFromSource(url, false);
+});
+
+document.getElementById('clear-source-btn').addEventListener('click', async () => {
+  await window.storage.delete('scratcher_source_url');
+  document.getElementById('source-url').value = '';
+  const msg = document.getElementById('source-msg');
+  msg.className = 'err good';
+  msg.textContent = 'Live source removed. The ledger will stop auto-syncing.';
+});
+
+document.getElementById('export-btn').addEventListener('click', async () => {
+  const msg = document.getElementById('sync-msg');
+  const data = games.map(({id, prob, remainPct, ...rest}) => rest);
+  const text = JSON.stringify(data, null, 2);
+  try{
+    await navigator.clipboard.writeText(text);
+    msg.className = 'err good';
+    msg.textContent = 'Copied current ledger as JSON to your clipboard.';
+  }catch(e){
+    msg.className = 'err';
+    msg.textContent = 'Could not copy automatically \u2014 select and copy the box below.';
+    document.getElementById('import-box').value = text;
+  }
+});
+
+load();
+</script>
+</body>
+</html>
