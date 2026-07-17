@@ -1,0 +1,40 @@
+# Save this file as: .github/workflows/daily-sync.yml  (in a new or existing GitHub repo)
+#
+# Setup (one-time, ~5 minutes):
+#   1. Create a free GitHub repo (public is easiest -- raw file hosting requires no auth).
+#   2. Add sync_scratchers.py to the repo root.
+#   3. Create the folder .github/workflows/ and put this file in it as daily-sync.yml.
+#   4. Commit and push. GitHub will run it automatically on the schedule below.
+#   5. In the Scratcher Odds Ledger's "Sync data" panel, set the Live data source URL to:
+#        https://raw.githubusercontent.com/<your-username>/<your-repo>/main/data.json
+#      (swap in your actual username/repo name)
+#
+# From then on, opening the ledger auto-fetches whatever data.json currently contains --
+# which this workflow refreshes once a day.
+
+name: Daily scratcher sync
+
+on:
+  schedule:
+    - cron: '0 12 * * *'   # 12:00 UTC = 7am Central (6am during CDT) -- adjust as you like
+  workflow_dispatch: {}     # lets you trigger it manually from the Actions tab too
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run sync script
+        run: python3 sync_scratchers.py > data.json
+
+      - name: Commit if changed
+        run: |
+          git config user.name "scratcher-sync-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add data.json
+          git diff --quiet --cached || git commit -m "Daily scratcher data sync"
+          git push
