@@ -237,9 +237,9 @@
     </div>
   </header>
 
-  <div class="slip" id="sync-panel">
-    <h2>Sync data</h2>
-    <div class="sub" style="margin-bottom:12px;">
+  <details class="slip" id="sync-panel">
+    <summary style="cursor:pointer; font-family:'Barlow Condensed', sans-serif; font-weight:700; font-size:15px; letter-spacing:0.14em; text-transform:uppercase; color: var(--gold);">Sync data &amp; settings</summary>
+    <div class="sub" style="margin:12px 0;">
       Ask Claude to "refresh the ledger" any time for a current snapshot, or send a photo of a ticket at the counter
       and paste the JSON it gives you here. Matches are merged by game name &mdash; your own entries won't be lost.
     </div>
@@ -260,11 +260,11 @@
       </div>
       <div class="err" id="source-msg"></div>
     </div>
-  </div>
+  </details>
 
-  <div class="slip">
-    <h2>Add a ticket</h2>
-    <div class="grid">
+  <details class="slip">
+    <summary style="cursor:pointer; font-family:'Barlow Condensed', sans-serif; font-weight:700; font-size:15px; letter-spacing:0.14em; text-transform:uppercase; color: var(--gold);">Add a ticket</summary>
+    <div class="grid" style="margin-top:12px;">
       <div>
         <label>Game name</label>
         <input id="f-name" type="text" placeholder="e.g. Ultimate Millions">
@@ -303,7 +303,7 @@
       <button class="secondary" id="clear-btn">Clear all</button>
     </div>
     <div class="err" id="form-err"></div>
-  </div>
+  </details>
 
   <div class="sortbar">
     <span class="label" id="count-label">0 games tracked</span>
