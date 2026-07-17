@@ -405,10 +405,15 @@ async function mergeSnapshot(incoming){
   let updated = 0, added = 0, skipped = 0;
   incoming.forEach(item => {
     if(!item || !item.name || !(item.price >= 0)){ skipped++; return; }
-    const match = games.find(g => normName(g.name) === normName(item.name));
+    const incomingGameNum = (item.gameNumber === undefined || item.gameNumber === null || item.gameNumber === '') ? null : parseInt(item.gameNumber, 10);
+    // Match by game number when both sides have one (numbers are unique; names get reused
+    // across different games over the years). Fall back to name only when no number exists.
+    const match = incomingGameNum !== null
+      ? games.find(g => g.gameNumber === incomingGameNum)
+      : games.find(g => !g.gameNumber && normName(g.name) === normName(item.name));
     const clean = {
       name: item.name,
-      gameNumber: (item.gameNumber === undefined || item.gameNumber === null || item.gameNumber === '') ? null : parseInt(item.gameNumber, 10),
+      gameNumber: incomingGameNum,
       price: item.price,
       odds: (item.odds === undefined || item.odds === null || item.odds === '') ? null : parseFloat(item.odds),
       prize: item.prize || 0,
