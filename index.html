@@ -170,7 +170,8 @@
     background: var(--felt-dark);
     flex-shrink: 0;
   }
-  .thumb img{ width:100%; height:100%; object-fit: cover; display:block; }
+  .thumb img{ width:100%; height:100%; object-fit: cover; display:block; cursor: pointer; }
+  .thumb img:hover{ outline: 2px solid var(--gold); outline-offset: -2px; }
   .thumb-fallback{
     width:100%; height:100%;
     display:flex; align-items:center; justify-content:center;
@@ -208,6 +209,29 @@
   .empty{
     text-align:center; padding: 40px 20px; color: rgba(241,237,226,0.5); font-size:12.5px;
     border: 1px dashed var(--line); border-radius:4px;
+  }
+
+  #lightbox{
+    display:none; position: fixed; inset: 0; z-index: 999;
+    background: rgba(0,0,0,0.82);
+    align-items: center; justify-content: center;
+    flex-direction: column; gap: 14px;
+    cursor: zoom-out;
+    padding: 24px;
+  }
+  #lightbox.open{ display:flex; }
+  #lightbox img{
+    max-width: min(90vw, 420px); max-height: 70vh;
+    image-rendering: pixelated;
+    border: 2px solid var(--gold-dim); border-radius: 4px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+  }
+  #lightbox .lb-caption{
+    color: var(--chalk); font-family:'Barlow Condensed', sans-serif; font-weight:700;
+    font-size: 16px; text-align:center;
+  }
+  #lightbox .lb-hint{
+    color: rgba(241,237,226,0.5); font-size: 10.5px; letter-spacing:0.06em; text-transform:uppercase;
   }
 
   footer{
@@ -340,6 +364,12 @@
     <a href="https://www.texaslottery.com/export/sites/lottery/Responsible_Gaming/index.html" target="_blank" rel="noopener">Council on Problem and Compulsive Gambling of Texas</a> (24/7: 1-800-522-4700).
   </footer>
 
+</div>
+
+<div id="lightbox">
+  <img id="lightbox-img" src="" alt="">
+  <div class="lb-caption" id="lightbox-caption"></div>
+  <div class="lb-hint">Tap anywhere to close</div>
 </div>
 
 <script>
@@ -546,8 +576,8 @@ function render(){
         <div class="rank">${i+1}</div>
         <div class="thumb">
           ${g.gameNumber
-            ? `<img src="https://www.texaslottery.com/export/sites/lottery/Images/scratchoffs/${g.gameNumber}_img1.gif" alt="${escapeHtml(g.name)}" loading="lazy" onerror="this.onerror=null;this.src='${ticketSvg(g)}';">`
-            : `<img src="${ticketSvg(g)}" alt="${escapeHtml(g.name)}">`}
+            ? `<img src="https://www.texaslottery.com/export/sites/lottery/Images/scratchoffs/${g.gameNumber}_img1.gif" alt="${escapeHtml(g.name)}" loading="lazy" onerror="this.onerror=null;this.src='${ticketSvg(g)}';" onclick="openLightbox(this.src, '${escapeHtml(g.name).replace(/'/g, "\\'")}')">`
+            : `<img src="${ticketSvg(g)}" alt="${escapeHtml(g.name)}" onclick="openLightbox(this.src, '${escapeHtml(g.name).replace(/'/g, "\\'")}')">`}
         </div>
         <div class="name">${escapeHtml(g.name)}${isBestOdds ? '<span class="badge">Best odds</span>' : ''}${isBestRemain ? '<span class="badge">Freshest</span>' : ''}${remainBadge}
           <span class="price">$${g.price} ticket${g.gameNumber ? ' &middot; Game #' + g.gameNumber : ''}${g.asOf ? ' &middot; as of ' + g.asOf : ''}
@@ -583,6 +613,18 @@ function escapeHtml(s){
   d.textContent = s;
   return d.innerHTML;
 }
+
+function openLightbox(src, name){
+  document.getElementById('lightbox-img').src = src;
+  document.getElementById('lightbox-caption').textContent = name;
+  document.getElementById('lightbox').classList.add('open');
+}
+document.getElementById('lightbox').addEventListener('click', () => {
+  document.getElementById('lightbox').classList.remove('open');
+});
+document.addEventListener('keydown', (e) => {
+  if(e.key === 'Escape') document.getElementById('lightbox').classList.remove('open');
+});
 
 async function removeGame(id){
   games = games.filter(g => g.id !== id);
