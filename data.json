@@ -16,7 +16,7 @@
     "price": 20.0,
     "prize": 1000000.0,
     "total": 4,
-    "remain": 3,
+    "remain": 2,
     "asOf": "2026-07-17",
     "odds": null,
     "oddsAsOf": null
@@ -38,7 +38,7 @@
     "price": 20.0,
     "prize": 1000.0,
     "total": 4913,
-    "remain": 1364,
+    "remain": 1360,
     "asOf": "2026-07-17",
     "odds": null,
     "oddsAsOf": null
@@ -115,7 +115,7 @@
     "price": 10.0,
     "prize": 500.0,
     "total": 10081,
-    "remain": 2662,
+    "remain": 2652,
     "asOf": "2026-07-17",
     "odds": null,
     "oddsAsOf": null
@@ -236,7 +236,7 @@
     "price": 1.0,
     "prize": 500.0,
     "total": 163,
-    "remain": 41,
+    "remain": 38,
     "asOf": "2026-07-17",
     "odds": null,
     "oddsAsOf": null
@@ -423,7 +423,7 @@
     "price": 2.0,
     "prize": 200.0,
     "total": 7609,
-    "remain": 5251,
+    "remain": 5231,
     "asOf": "2026-07-17",
     "odds": null,
     "oddsAsOf": null
