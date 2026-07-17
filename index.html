@@ -307,6 +307,10 @@
 
   <div class="sortbar">
     <span class="label" id="count-label">0 games tracked</span>
+    <span class="label" id="freshness-label" style="text-align:right;"></span>
+  </div>
+  <div class="sortbar" style="margin-top:-8px;">
+    <span></span>
     <span>
       <span class="label" style="margin-right:8px;">Sort by</span>
       <select id="sort-select">
@@ -416,6 +420,7 @@ async function mergeSnapshot(incoming){
       gameNumber: incomingGameNum,
       price: item.price,
       odds: (item.odds === undefined || item.odds === null || item.odds === '') ? null : parseFloat(item.odds),
+      oddsAsOf: item.oddsAsOf || null,
       prize: item.prize || 0,
       remain: (item.remain === undefined || item.remain === null) ? null : parseFloat(item.remain),
       total: (item.total === undefined || item.total === null) ? null : parseFloat(item.total),
@@ -494,6 +499,18 @@ function render(){
   document.getElementById('count-label').textContent =
     games.length + (games.length === 1 ? ' game tracked' : ' games tracked');
 
+  const dates = games.map(g => g.asOf).filter(Boolean).sort();
+  const freshLabel = document.getElementById('freshness-label');
+  if(dates.length){
+    const newest = dates[dates.length - 1];
+    const oldest = dates[0];
+    freshLabel.textContent = newest === oldest
+      ? `Remaining-prize data as of ${newest}`
+      : `Remaining-prize data: ${oldest} to ${newest}`;
+  }else{
+    freshLabel.textContent = '';
+  }
+
   const list = document.getElementById('list');
   if(games.length === 0){
     list.innerHTML = '<div class="empty">No tickets logged yet &mdash; add one above to start ranking.</div>';
@@ -539,7 +556,7 @@ function render(){
         </div>
         <div class="metric">
           <div class="v">${g.odds ? '1 in ' + g.odds : '&mdash;'}</div>
-          <div class="k">Overall odds</div>
+          <div class="k">${g.oddsAsOf ? 'Odds as of ' + g.oddsAsOf : 'Overall odds'}</div>
         </div>
         <div class="metric">
           <div class="v">${fmtMoney(g.prize)}</div>

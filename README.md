@@ -44,15 +44,22 @@ repo. No server, database, or hosting to maintain.
     "total": 4,
     "remain": 4,
     "asOf": "2026-07-16",
-    "odds": 3.41
+    "odds": 3.41,
+    "oddsAsOf": "2026-07-16"
   }
 ]
 ```
 
-`odds` (overall odds of winning any prize, "1 in X") isn't in Texas Lottery's daily
-CSV — it's only published per game on individual ticket pages. Verified values are kept
-in `ODDS_OVERRIDES` inside `sync_scratchers.py` and merged in automatically; add more
-there as you find them.
+- `price`, `prize`, `total`, `remain`, `asOf` come from Texas Lottery's own daily CSV --
+  authoritative, refreshed every run.
+- `odds` (overall odds of winning any prize, "1 in X") isn't in that CSV -- it's scraped
+  from [ScratchSmarter](https://scratchsmarter.com/texas/scratch-games/)'s public table,
+  a third-party site, not an official Texas Lottery source. `oddsAsOf` is *their*
+  last-scraped date for that specific game, which can lag behind `asOf` since they don't
+  refresh every game daily. Treat `odds` as "likely accurate" rather than guaranteed, and
+  cross-check anything important against the ticket itself or texaslottery.com.
+- Games are matched between sources by `gameNumber`, not name -- Texas Lottery reuses
+  names across different games release years apart, so name-matching alone is unreliable.
 
 ## Notes
 
