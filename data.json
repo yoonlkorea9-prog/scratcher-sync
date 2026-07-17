@@ -1,0 +1,722 @@
+[
+  {
+    "name": "$1,000,000 CROSSWORD",
+    "gameNumber": 2658,
+    "price": 20.0,
+    "prize": 1000000.0,
+    "total": 6,
+    "remain": 1,
+    "asOf": "2026-07-17",
+    "odds": null
+  },
+  {
+    "name": "$1,000,000 Ca$h!",
+    "gameNumber": 2744,
+    "price": 20.0,
+    "prize": 1000000.0,
+    "total": 4,
+    "remain": 3,
+    "asOf": "2026-07-17",
+    "odds": 3.99
+  },
+  {
+    "name": "$1,000,000 Riches",
+    "gameNumber": 2636,
+    "price": 10.0,
+    "prize": 1000000.0,
+    "total": 4,
+    "remain": 2,
+    "asOf": "2026-07-17",
+    "odds": null
+  },
+  {
+    "name": "$100, $200, $500 OR $1,000!",
+    "gameNumber": 2609,
+    "price": 20.0,
+    "prize": 1000.0,
+    "total": 4913,
+    "remain": 1364,
+    "asOf": "2026-07-17",
+    "odds": null
+  },
+  {
+    "name": "$100,000 Cash",
+    "gameNumber": 2577,
+    "price": 5.0,
+    "prize": 100000.0,
+    "total": 5,
+    "remain": 4,
+    "asOf": "2026-07-17",
+    "odds": null
+  },
+  {
+    "name": "$20 Million Supreme",
+    "gameNumber": 2400,
+    "price": 100.0,
+    "prize": 20000000.0,
+    "total": 4,
+    "remain": 0,
+    "asOf": "2026-07-17",
+    "odds": 3.49
+  },
+  {
+    "name": "$250,000 50X Cashword",
+    "gameNumber": 2668,
+    "price": 10.0,
+    "prize": 250000.0,
+    "total": 10,
+    "remain": 6,
+    "asOf": "2026-07-17",
+    "odds": null
+  },
+  {
+    "name": "$5 Million Royale",
+    "gameNumber": 2624,
+    "price": 50.0,
+    "prize": 5000000.0,
+    "total": 4,
+    "remain": 2,
+    "asOf": "2026-07-17",
+    "odds": 3.66
+  },
+  {
+    "name": "$5 Million Titanium Black",
+    "gameNumber": 2627,
+    "price": 100.0,
+    "prize": 5000000.0,
+    "total": 4,
+    "remain": 3,
+    "asOf": "2026-07-17",
+    "odds": 3.89
+  },
+  {
+    "name": "$5,000,000 Fortune",
+    "gameNumber": 2665,
+    "price": 100.0,
+    "prize": 5000000.0,
+    "total": 4,
+    "remain": 2,
+    "asOf": "2026-07-17",
+    "odds": 3.91
+  },
+  {
+    "name": "$50, $100 OR $500!",
+    "gameNumber": 2637,
+    "price": 10.0,
+    "prize": 500.0,
+    "total": 10081,
+    "remain": 2662,
+    "asOf": "2026-07-17",
+    "odds": null
+  },
+  {
+    "name": "100X Sonic Blast",
+    "gameNumber": 2691,
+    "price": 10.0,
+    "prize": 250000.0,
+    "total": 4,
+    "remain": 1,
+    "asOf": "2026-07-17",
+    "odds": null
+  },
+  {
+    "name": "100X The Cash",
+    "gameNumber": 2713,
+    "price": 10.0,
+    "prize": 500000.0,
+    "total": 4,
+    "remain": 3,
+    "asOf": "2026-07-17",
+    "odds": 3.98
+  },
+  {
+    "name": "200X The Cash",
+    "gameNumber": 2613,
+    "price": 20.0,
+    "prize": 1000000.0,
+    "total": 4,
+    "remain": 4,
+    "asOf": "2026-07-17",
+    "odds": 3.41
+  },
+  {
+    "name": "200X The Cash",
+    "gameNumber": 2714,
+    "price": 20.0,
+    "prize": 1000000.0,
+    "total": 4,
+    "remain": 2,
+    "asOf": "2026-07-17",
+    "odds": null
+  },
+  {
+    "name": "20X The Money",
+    "gameNumber": 2646,
+    "price": 2.0,
+    "prize": 30000.0,
+    "total": 5,
+    "remain": 2,
+    "asOf": "2026-07-17",
+    "odds": null
+  },
+  {
+    "name": "30X The Cash Word Search",
+    "gameNumber": 2711,
+    "price": 3.0,
+    "prize": 60000.0,
+    "total": 6,
+    "remain": 4,
+    "asOf": "2026-07-17",
+    "odds": 4.39
+  },
+  {
+    "name": "500X",
+    "gameNumber": 2589,
+    "price": 50.0,
+    "prize": 1000000.0,
+    "total": 15,
+    "remain": 2,
+    "asOf": "2026-07-17",
+    "odds": 3.36
+  },
+  {
+    "name": "500X Loteria Spectacular",
+    "gameNumber": 2659,
+    "price": 50.0,
+    "prize": 3000000.0,
+    "total": 4,
+    "remain": 2,
+    "asOf": "2026-07-17",
+    "odds": null
+  },
+  {
+    "name": "50X The Cash",
+    "gameNumber": 2712,
+    "price": 5.0,
+    "prize": 200000.0,
+    "total": 4,
+    "remain": 2,
+    "asOf": "2026-07-17",
+    "odds": null
+  },
+  {
+    "name": "777",
+    "gameNumber": 2632,
+    "price": 10.0,
+    "prize": 250000.0,
+    "total": 8,
+    "remain": 3,
+    "asOf": "2026-07-17",
+    "odds": null
+  },
+  {
+    "name": "9s In A Line",
+    "gameNumber": 2710,
+    "price": 1.0,
+    "prize": 500.0,
+    "total": 163,
+    "remain": 41,
+    "asOf": "2026-07-17",
+    "odds": null
+  },
+  {
+    "name": "Airstream\u00ae Dream",
+    "gameNumber": 2745,
+    "price": 5.0,
+    "prize": 100000.0,
+    "total": 5,
+    "remain": 4,
+    "asOf": "2026-07-17",
+    "odds": null
+  },
+  {
+    "name": "All About the 8s",
+    "gameNumber": 2727,
+    "price": 5.0,
+    "prize": 100000.0,
+    "total": 4,
+    "remain": 2,
+    "asOf": "2026-07-17",
+    "odds": null
+  },
+  {
+    "name": "Azulejos",
+    "gameNumber": 2751,
+    "price": 5.0,
+    "prize": 100000.0,
+    "total": 4,
+    "remain": 2,
+    "asOf": "2026-07-17",
+    "odds": null
+  },
+  {
+    "name": "Bingo Times 20",
+    "gameNumber": 2667,
+    "price": 5.0,
+    "prize": 100000.0,
+    "total": 5,
+    "remain": 2,
+    "asOf": "2026-07-17",
+    "odds": null
+  },
+  {
+    "name": "Bonus Break the Bank",
+    "gameNumber": 2430,
+    "price": 5.0,
+    "prize": 100000.0,
+    "total": 10,
+    "remain": 5,
+    "asOf": "2026-07-17",
+    "odds": null
+  },
+  {
+    "name": "Break the Bank",
+    "gameNumber": 2700,
+    "price": 2.0,
+    "prize": 30000.0,
+    "total": 10,
+    "remain": 2,
+    "asOf": "2026-07-17",
+    "odds": null
+  },
+  {
+    "name": "Cash Frenzy",
+    "gameNumber": 2424,
+    "price": 1.0,
+    "prize": 500.0,
+    "total": 14,
+    "remain": 5,
+    "asOf": "2026-07-17",
+    "odds": null
+  },
+  {
+    "name": "Cash Line Bingo",
+    "gameNumber": 2647,
+    "price": 2.0,
+    "prize": 30000.0,
+    "total": 10,
+    "remain": 5,
+    "asOf": "2026-07-17",
+    "odds": null
+  },
+  {
+    "name": "Cashword",
+    "gameNumber": 2662,
+    "price": 3.0,
+    "prize": 50000.0,
+    "total": 13,
+    "remain": 9,
+    "asOf": "2026-07-17",
+    "odds": null
+  },
+  {
+    "name": "Casino Millions",
+    "gameNumber": 2689,
+    "price": 50.0,
+    "prize": 1000000.0,
+    "total": 10,
+    "remain": 8,
+    "asOf": "2026-07-17",
+    "odds": 3.45
+  },
+  {
+    "name": "Chameleon Cash",
+    "gameNumber": 2720,
+    "price": 5.0,
+    "prize": 100000.0,
+    "total": 5,
+    "remain": 1,
+    "asOf": "2026-07-17",
+    "odds": null
+  },
+  {
+    "name": "Crazy 8s",
+    "gameNumber": 2656,
+    "price": 2.0,
+    "prize": 30000.0,
+    "total": 6,
+    "remain": 2,
+    "asOf": "2026-07-17",
+    "odds": null
+  },
+  {
+    "name": "Diamond 7s",
+    "gameNumber": 2685,
+    "price": 20.0,
+    "prize": 1000000.0,
+    "total": 4,
+    "remain": 2,
+    "asOf": "2026-07-17",
+    "odds": null
+  },
+  {
+    "name": "Easy...1-2-3",
+    "gameNumber": 2673,
+    "price": 1.0,
+    "prize": 500.0,
+    "total": 14,
+    "remain": 6,
+    "asOf": "2026-07-17",
+    "odds": null
+  },
+  {
+    "name": "Emerald 7s",
+    "gameNumber": 2683,
+    "price": 5.0,
+    "prize": 200000.0,
+    "total": 4,
+    "remain": 2,
+    "asOf": "2026-07-17",
+    "odds": null
+  },
+  {
+    "name": "Extreme Multiplier",
+    "gameNumber": 2655,
+    "price": 20.0,
+    "prize": 1000000.0,
+    "total": 4,
+    "remain": 1,
+    "asOf": "2026-07-17",
+    "odds": null
+  },
+  {
+    "name": "Find $200",
+    "gameNumber": 2715,
+    "price": 2.0,
+    "prize": 200.0,
+    "total": 7609,
+    "remain": 5251,
+    "asOf": "2026-07-17",
+    "odds": null
+  },
+  {
+    "name": "Golden Riches",
+    "gameNumber": 2677,
+    "price": 50.0,
+    "prize": 2000000.0,
+    "total": 4,
+    "remain": 2,
+    "asOf": "2026-07-17",
+    "odds": null
+  },
+  {
+    "name": "In the Green",
+    "gameNumber": 2660,
+    "price": 5.0,
+    "prize": 100000.0,
+    "total": 6,
+    "remain": 1,
+    "asOf": "2026-07-17",
+    "odds": null
+  },
+  {
+    "name": "Instant Millions",
+    "gameNumber": 2671,
+    "price": 20.0,
+    "prize": 1000000.0,
+    "total": 4,
+    "remain": 2,
+    "asOf": "2026-07-17",
+    "odds": null
+  },
+  {
+    "name": "King of Cash",
+    "gameNumber": 2739,
+    "price": 2.0,
+    "prize": 30000.0,
+    "total": 5,
+    "remain": 4,
+    "asOf": "2026-07-17",
+    "odds": null
+  },
+  {
+    "name": "Limited Edition Mega Loteria",
+    "gameNumber": 2676,
+    "price": 10.0,
+    "prize": 250000.0,
+    "total": 10,
+    "remain": 3,
+    "asOf": "2026-07-17",
+    "odds": null
+  },
+  {
+    "name": "Loteria Azul",
+    "gameNumber": 2765,
+    "price": 5.0,
+    "prize": 100000.0,
+    "total": 5,
+    "remain": 3,
+    "asOf": "2026-07-17",
+    "odds": null
+  },
+  {
+    "name": "Loteria Supreme",
+    "gameNumber": 2587,
+    "price": 100.0,
+    "prize": 7500000.0,
+    "total": 4,
+    "remain": 2,
+    "asOf": "2026-07-17",
+    "odds": 3.23
+  },
+  {
+    "name": "Lucky 7s Tripler",
+    "gameNumber": 2723,
+    "price": 5.0,
+    "prize": 100000.0,
+    "total": 4,
+    "remain": 0,
+    "asOf": "2026-07-17",
+    "odds": null
+  },
+  {
+    "name": "Lucky Match",
+    "gameNumber": 2705,
+    "price": 10.0,
+    "prize": 250000.0,
+    "total": 4,
+    "remain": 2,
+    "asOf": "2026-07-17",
+    "odds": null
+  },
+  {
+    "name": "Lucky No. 7",
+    "gameNumber": 2622,
+    "price": 2.0,
+    "prize": 30000.0,
+    "total": 6,
+    "remain": 4,
+    "asOf": "2026-07-17",
+    "odds": 4.33
+  },
+  {
+    "name": "Mega Cash!",
+    "gameNumber": 2733,
+    "price": 10.0,
+    "prize": 250000.0,
+    "total": 5,
+    "remain": 5,
+    "asOf": "2026-07-17",
+    "odds": null
+  },
+  {
+    "name": "Mega Loteria",
+    "gameNumber": 2669,
+    "price": 10.0,
+    "prize": 250000.0,
+    "total": 10,
+    "remain": 3,
+    "asOf": "2026-07-17",
+    "odds": null
+  },
+  {
+    "name": "Mega Millionaire",
+    "gameNumber": 2722,
+    "price": 20.0,
+    "prize": 1000000.0,
+    "total": 4,
+    "remain": 3,
+    "asOf": "2026-07-17",
+    "odds": null
+  },
+  {
+    "name": "Million Dollar Loteria",
+    "gameNumber": 2653,
+    "price": 20.0,
+    "prize": 1000000.0,
+    "total": 10,
+    "remain": 2,
+    "asOf": "2026-07-17",
+    "odds": null
+  },
+  {
+    "name": "Millionaire's Club",
+    "gameNumber": 2730,
+    "price": 30.0,
+    "prize": 2000000.0,
+    "total": 4,
+    "remain": 3,
+    "asOf": "2026-07-17",
+    "odds": null
+  },
+  {
+    "name": "Monaco Cash",
+    "gameNumber": 2736,
+    "price": 5.0,
+    "prize": 200000.0,
+    "total": 5,
+    "remain": 2,
+    "asOf": "2026-07-17",
+    "odds": null
+  },
+  {
+    "name": "Monaco Millionaire",
+    "gameNumber": 2738,
+    "price": 20.0,
+    "prize": 1000000.0,
+    "total": 4,
+    "remain": 2,
+    "asOf": "2026-07-17",
+    "odds": null
+  },
+  {
+    "name": "Monaco VIP",
+    "gameNumber": 2737,
+    "price": 10.0,
+    "prize": 500000.0,
+    "total": 4,
+    "remain": 3,
+    "asOf": "2026-07-17",
+    "odds": null
+  },
+  {
+    "name": "Patriotic Payout",
+    "gameNumber": 2692,
+    "price": 2.0,
+    "prize": 30000.0,
+    "total": 5,
+    "remain": 3,
+    "asOf": "2026-07-17",
+    "odds": null
+  },
+  {
+    "name": "Power 20s",
+    "gameNumber": 2725,
+    "price": 20.0,
+    "prize": 1000000.0,
+    "total": 4,
+    "remain": 2,
+    "asOf": "2026-07-17",
+    "odds": null
+  },
+  {
+    "name": "Premier Play",
+    "gameNumber": 2661,
+    "price": 30.0,
+    "prize": 1000000.0,
+    "total": 10,
+    "remain": 5,
+    "asOf": "2026-07-17",
+    "odds": null
+  },
+  {
+    "name": "Queen of Spades",
+    "gameNumber": 2706,
+    "price": 20.0,
+    "prize": 1000000.0,
+    "total": 4,
+    "remain": 3,
+    "asOf": "2026-07-17",
+    "odds": null
+  },
+  {
+    "name": "Reindeer Riches",
+    "gameNumber": 2699,
+    "price": 10.0,
+    "prize": 250000.0,
+    "total": 5,
+    "remain": 1,
+    "asOf": "2026-07-17",
+    "odds": null
+  },
+  {
+    "name": "Royal Riches",
+    "gameNumber": 2672,
+    "price": 2.0,
+    "prize": 30000.0,
+    "total": 5,
+    "remain": 2,
+    "asOf": "2026-07-17",
+    "odds": null
+  },
+  {
+    "name": "Slots of Luck",
+    "gameNumber": 2724,
+    "price": 10.0,
+    "prize": 250000.0,
+    "total": 6,
+    "remain": 5,
+    "asOf": "2026-07-17",
+    "odds": null
+  },
+  {
+    "name": "Super Crossword",
+    "gameNumber": 2740,
+    "price": 5.0,
+    "prize": 100000.0,
+    "total": 10,
+    "remain": 9,
+    "asOf": "2026-07-17",
+    "odds": null
+  },
+  {
+    "name": "Super Loteria",
+    "gameNumber": 2648,
+    "price": 5.0,
+    "prize": 100000.0,
+    "total": 30,
+    "remain": 7,
+    "asOf": "2026-07-17",
+    "odds": null
+  },
+  {
+    "name": "Super Loteria",
+    "gameNumber": 2743,
+    "price": 5.0,
+    "prize": 100000.0,
+    "total": 30,
+    "remain": 29,
+    "asOf": "2026-07-17",
+    "odds": null
+  },
+  {
+    "name": "Texas Loteria",
+    "gameNumber": 2628,
+    "price": 3.0,
+    "prize": 50000.0,
+    "total": 14,
+    "remain": 5,
+    "asOf": "2026-07-17",
+    "odds": null
+  },
+  {
+    "name": "Ultimate Millions",
+    "gameNumber": 2610,
+    "price": 50.0,
+    "prize": 1000000.0,
+    "total": 4,
+    "remain": 3,
+    "asOf": "2026-07-17",
+    "odds": null
+  },
+  {
+    "name": "Winning 7s",
+    "gameNumber": 2124,
+    "price": 1.0,
+    "prize": 500.0,
+    "total": 21,
+    "remain": 4,
+    "asOf": "2026-07-17",
+    "odds": null
+  },
+  {
+    "name": "X",
+    "gameNumber": 2590,
+    "price": 50.0,
+    "prize": 1000000.0,
+    "total": 4,
+    "remain": 1,
+    "asOf": "2026-07-17",
+    "odds": null
+  },
+  {
+    "name": "Yellowstone",
+    "gameNumber": 2728,
+    "price": 5.0,
+    "prize": 100000.0,
+    "total": 5,
+    "remain": 3,
+    "asOf": "2026-07-17",
+    "odds": null
+  }
+]
