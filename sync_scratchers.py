@@ -40,6 +40,7 @@ HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; ScratcherLedgerSync/1.0)"}
 # depend on a third-party tracker that may block automated requests.
 ODDS_OVERRIDES = {
     2613: 3.41,
+    2753: 3.41,
     2689: 3.45,
     2744: 3.99,
     2627: 3.89,

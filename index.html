@@ -259,6 +259,7 @@
       <a href="https://www.texaslottery.com/export/sites/lottery/Games/Scratch_Offs/all.html" target="_blank" rel="noopener">Texas Lottery scratch-off list</a>)
       to rank games by overall odds and see how depleted the top prize pool is. Saved to this browser automatically.
     </div>
+    <div class="label" id="last-sync-label" style="margin-top:8px;">Never synced from a live source yet.</div>
   </header>
 
   <details class="slip" id="sync-panel">
@@ -377,6 +378,29 @@ const STORE_KEY = 'scratcher_games';
 let games = [];
 let sortMode = 'remain';
 
+// window.storage only exists inside Claude's artifact viewer. On a standalone page
+// (e.g. hosted on GitHub Pages), it's undefined -- so everything silently failed to
+// persist there. This falls back to localStorage, the correct mechanism for a real
+// website, while still using window.storage when actually running inside Claude.
+const storageAPI = (typeof window !== 'undefined' && window.storage) ? window.storage : {
+  async get(key){
+    const v = localStorage.getItem(key);
+    return v !== null ? {key, value: v, shared:false} : null;
+  },
+  async set(key, value){
+    localStorage.setItem(key, value);
+    return {key, value, shared:false};
+  },
+  async delete(key){
+    localStorage.removeItem(key);
+    return {key, deleted:true, shared:false};
+  },
+  async list(prefix){
+    const keys = Object.keys(localStorage).filter(k => !prefix || k.startsWith(prefix));
+    return {keys, shared:false};
+  }
+};
+
 // Snapshot pulled from texaslottery.com's official "Prizes Claimed" report, Jul 11, 2026.
 // Top-prize tier only (highest prize amount per game). Overall odds aren't published in
 // this daily report -- only on each game's individual page -- so most are blank here.
@@ -463,6 +487,28 @@ async function mergeSnapshot(incoming){
   return {updated, added, skipped};
 }
 
+async function recordSyncMeta(status, message){
+  const meta = {status, message, timestamp: new Date().toISOString()};
+  try{ await storageAPI.set('scratcher_last_sync_meta', JSON.stringify(meta)); }catch(e){ /* ignore */ }
+  renderSyncMeta(meta);
+}
+
+function renderSyncMeta(meta){
+  const el = document.getElementById('last-sync-label');
+  if(!el) return;
+  if(!meta){ el.textContent = 'Never synced from a live source yet.'; el.className = 'label'; return; }
+  const when = new Date(meta.timestamp).toLocaleString(undefined, {
+    month:'short', day:'numeric', hour:'numeric', minute:'2-digit'
+  });
+  if(meta.status === 'success'){
+    el.textContent = `Last synced: ${when} \u2014 ${meta.message}`;
+    el.style.color = 'var(--good)';
+  }else{
+    el.textContent = `Last sync FAILED: ${when} \u2014 ${meta.message}`;
+    el.style.color = 'var(--warn)';
+  }
+}
+
 async function fetchFromSource(url, isAuto){
   const msg = document.getElementById('source-msg');
   try{
@@ -472,15 +518,19 @@ async function fetchFromSource(url, isAuto){
     if(!Array.isArray(data)) throw new Error('Expected a JSON array');
     const {updated, added, skipped} = await mergeSnapshot(data);
     render();
-    if(msg) { msg.className = 'err good'; msg.textContent = `Synced: ${added} added, ${updated} updated${skipped ? ', ' + skipped + ' skipped' : ''}.`; }
+    const summary = `${added} added, ${updated} updated${skipped ? ', ' + skipped + ' skipped' : ''}`;
+    if(msg) { msg.className = 'err good'; msg.textContent = 'Synced: ' + summary + '.'; }
+    await recordSyncMeta('success', summary);
   }catch(e){
-    if(msg) { msg.className = 'err'; msg.textContent = (isAuto ? 'Auto-sync failed: ' : 'Fetch failed: ') + e.message + '. Falling back to saved data.'; }
+    const reason = (isAuto ? 'Auto-sync failed: ' : 'Fetch failed: ') + e.message;
+    if(msg) { msg.className = 'err'; msg.textContent = reason + '. Falling back to saved data.'; }
+    await recordSyncMeta('error', e.message);
   }
 }
 
 async function load(){
   try{
-    const res = await window.storage.get(STORE_KEY);
+    const res = await storageAPI.get(STORE_KEY);
     games = res ? JSON.parse(res.value) : [];
   }catch(e){ games = []; }
 
@@ -506,7 +556,12 @@ async function load(){
   render();
 
   try{
-    const src = await window.storage.get('scratcher_source_url');
+    const metaRes = await storageAPI.get('scratcher_last_sync_meta');
+    if(metaRes && metaRes.value) renderSyncMeta(JSON.parse(metaRes.value));
+  }catch(e){ /* never synced */ }
+
+  try{
+    const src = await storageAPI.get('scratcher_source_url');
     if(src && src.value){
       document.getElementById('source-url').value = src.value;
       fetchFromSource(src.value, true);
@@ -515,7 +570,7 @@ async function load(){
 }
 
 async function save(){
-  try{ await window.storage.set(STORE_KEY, JSON.stringify(games)); }
+  try{ await storageAPI.set(STORE_KEY, JSON.stringify(games)); }
   catch(e){ console.error('Storage save failed', e); }
 }
 
@@ -717,14 +772,14 @@ document.getElementById('save-source-btn').addEventListener('click', async () =>
   const url = document.getElementById('source-url').value.trim();
   const msg = document.getElementById('source-msg');
   if(!url){ msg.className = 'err'; msg.textContent = 'Paste a URL first.'; return; }
-  await window.storage.set('scratcher_source_url', url);
+  await storageAPI.set('scratcher_source_url', url);
   msg.className = 'err good';
   msg.textContent = 'Saved. Fetching now\u2026';
   fetchFromSource(url, false);
 });
 
 document.getElementById('clear-source-btn').addEventListener('click', async () => {
-  await window.storage.delete('scratcher_source_url');
+  await storageAPI.delete('scratcher_source_url');
   document.getElementById('source-url').value = '';
   const msg = document.getElementById('source-msg');
   msg.className = 'err good';
