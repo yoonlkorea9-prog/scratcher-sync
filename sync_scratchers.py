@@ -2,15 +2,21 @@
 """
 Daily sync for the Scratcher Odds Ledger.
 
-Combines two sources:
-  1. Texas Lottery's official CSV -- authoritative price/prize/remaining-prize counts.
-  2. ScratchSmarter's public Texas scratch-games table -- overall odds (not published
-     in the official CSV) plus a per-game "last scraped" date, since ScratchSmarter
-     doesn't refresh every game on the same day.
+Combines two official Texas Lottery sources:
+  1. The public CSV -- authoritative price/prize/remaining-prize counts, one row per
+     prize tier per game.
+  2. Each game's own detail page -- the actual source of "overall odds," which Texas
+     Lottery publishes per game but not in the bulk CSV. The game list page links every
+     game number to its detail page; this script visits each one and pulls the odds
+     sentence directly.
 
-Output: data.json, matching the ledger's import schema. Games are matched between the
-two sources by game number, since Texas Lottery reuses game *names* across different
-eras (confirmed multiple times while building this) -- numbers are the only reliable key.
+This avoids depending on third-party trackers (which may rate-limit or block automated
+requests) since the data comes straight from texaslottery.com in both cases.
+
+Games are matched between the two by game number -- Texas Lottery reuses game *names*
+across different eras, so numbers are the only reliable key.
+
+Output: data.json, matching the ledger's import schema.
 
 Usage:
     python sync_scratchers.py > data.json
@@ -20,17 +26,18 @@ import io
 import json
 import re
 import sys
+import time
 import urllib.request
 from datetime import date
 
 CSV_URL = "https://www.texaslottery.com/export/sites/lottery/Games/Scratch_Offs/scratchoff.csv"
-ODDS_TABLE_URL = "https://scratchsmarter.com/texas/scratch-games/"
+GAME_LIST_URL = "https://www.texaslottery.com/export/sites/lottery/Games/Scratch_Offs/all.html"
 HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; ScratcherLedgerSync/1.0)"}
 
 # Guaranteed baseline: verified "1 in X" overall odds, confirmed against official filings
-# or third-party trackers by hand. This always applies regardless of whether the scrape
-# below succeeds, since sites like ScratchSmarter can (and did) block automated requests
-# with a 403 -- scraping is treated as a bonus on top of this, never the only source.
+# by hand. Used only if a game's own detail page can't be reached or parsed for some reason --
+# the live per-game scrape below is the primary source now, since it's first-party and doesn't
+# depend on a third-party tracker that may block automated requests.
 ODDS_OVERRIDES = {
     2613: 3.41,
     2689: 3.45,
@@ -85,32 +92,60 @@ def parse_prize_data(csv_text):
     return best
 
 
-def parse_odds_table(html):
+def get_detail_page_links(html):
     """
-    Extract (game_number -> {odds, oddsAsOf}) from ScratchSmarter's table.
-    Uses a lightweight regex over <tr>...</tr> blocks rather than a full HTML parser,
-    to avoid an extra dependency -- tolerant of attribute/whitespace changes but does
-    assume the column order: PRICE | NAME | OVERALL ODDS | TOP PRIZES LEFT | NUMBER | SCRAPE DATE.
+    Extract (game_number -> absolute detail page URL) from the official game list page.
+    Texas Lottery links each game number directly to its own detail page, e.g.
+    <a href="/export/.../details.html_252699703.html">2613</a> -- the link TEXT is the
+    game number, which is the only reliable identifier (names get reused across eras).
+    """
+    links = {}
+    pattern = re.compile(
+        r'<a[^>]+href="([^"]*details\.html_\d+\.html)"[^>]*>\s*(\d{3,4})\s*</a>',
+        re.IGNORECASE
+    )
+    for href, game_num_str in pattern.findall(html):
+        url = href if href.startswith("http") else "https://www.texaslottery.com" + href
+        links[int(game_num_str)] = url
+    return links
+
+
+def extract_odds_from_detail_page(html):
+    """Pull the '1 in X' overall odds figure out of a game's own detail page."""
+    match = re.search(
+        r"overall odds[^0-9]{0,80}1\s*in\s*([0-9]+(?:\.[0-9]+)?)",
+        html,
+        re.IGNORECASE
+    )
+    return float(match.group(1)) if match else None
+
+
+def fetch_official_odds(game_numbers, delay=0.3):
+    """
+    For each game number, find its detail page and scrape the real overall odds off it --
+    the actual first-party Texas Lottery source, not a third-party aggregator.
     """
     odds = {}
-    row_re = re.compile(r"<tr[^>]*>(.*?)</tr>", re.DOTALL | re.IGNORECASE)
-    cell_re = re.compile(r"<t[dh][^>]*>(.*?)</t[dh]>", re.DOTALL | re.IGNORECASE)
-    tag_re = re.compile(r"<[^>]+>")
+    today = date.today().isoformat()
+    try:
+        list_html = fetch(GAME_LIST_URL)
+        links = get_detail_page_links(list_html)
+    except Exception as e:
+        print(f"WARNING could not load game list page: {e}", file=sys.stderr)
+        return odds
 
-    for row_match in row_re.finditer(html):
-        cells = cell_re.findall(row_match.group(1))
-        if len(cells) < 6:
+    for game_num in game_numbers:
+        url = links.get(game_num)
+        if not url:
             continue
-        clean = [tag_re.sub("", c).strip() for c in cells]
-        odds_val, game_num_val, date_val = clean[2], clean[4], clean[5]
         try:
-            game_num = int(game_num_val)
-            odds_num = float(odds_val)
-        except ValueError:
-            continue
-        # ScratchSmarter date format observed as YYYY-MM-DD; keep as-is if it matches, else skip.
-        as_of = date_val if re.match(r"^\d{4}-\d{2}-\d{2}$", date_val) else None
-        odds[game_num] = {"odds": odds_num, "oddsAsOf": as_of}
+            detail_html = fetch(url)
+            val = extract_odds_from_detail_page(detail_html)
+            if val is not None:
+                odds[game_num] = {"odds": val, "oddsAsOf": today}
+        except Exception as e:
+            print(f"WARNING could not fetch odds for game {game_num}: {e}", file=sys.stderr)
+        time.sleep(delay)  # be polite to their server
     return odds
 
 
@@ -122,12 +157,7 @@ def main():
         print(f"ERROR fetching official prize data: {e}", file=sys.stderr)
         prize_data = {}
 
-    try:
-        odds_html = fetch(ODDS_TABLE_URL)
-        odds_data = parse_odds_table(odds_html)
-    except Exception as e:
-        print(f"WARNING fetching odds table (continuing without odds): {e}", file=sys.stderr)
-        odds_data = {}
+    odds_data = fetch_official_odds(prize_data.keys())
 
     today = date.today().isoformat()
     output = []

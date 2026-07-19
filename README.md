@@ -52,12 +52,14 @@ repo. No server, database, or hosting to maintain.
 
 - `price`, `prize`, `total`, `remain`, `asOf` come from Texas Lottery's own daily CSV --
   authoritative, refreshed every run.
-- `odds` (overall odds of winning any prize, "1 in X") isn't in that CSV -- it's scraped
-  from [ScratchSmarter](https://scratchsmarter.com/texas/scratch-games/)'s public table,
-  a third-party site, not an official Texas Lottery source. `oddsAsOf` is *their*
-  last-scraped date for that specific game, which can lag behind `asOf` since they don't
-  refresh every game daily. Treat `odds` as "likely accurate" rather than guaranteed, and
-  cross-check anything important against the ticket itself or texaslottery.com.
+- `odds` (overall odds of winning any prize, "1 in X") isn't in that CSV, but Texas
+  Lottery does publish it on each game's own individual page. This script visits every
+  active game's page directly and scrapes it from there -- first-party data, not a
+  third-party tracker (an earlier version tried a third-party site and got blocked with
+  an HTTP 403, which is common for sites protecting scraped data; texaslottery.com
+  itself has no reason to block this). `oddsAsOf` is the sync date, or `"verified
+  manually"` for the small static fallback list in `ODDS_OVERRIDES`, used only if a
+  specific game's page can't be reached that day.
 - Games are matched between sources by `gameNumber`, not name -- Texas Lottery reuses
   names across different games release years apart, so name-matching alone is unreliable.
 
