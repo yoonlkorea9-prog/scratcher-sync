@@ -9,9 +9,10 @@ repo. No server, database, or hosting to maintain.
 
 ## How it works
 
-1. `sync_scratchers.py` downloads the Texas Lottery's official public CSV
-   (`scratchoff.csv`), keeps only the highest-value ("top") prize tier for each active
-   game, and computes how many of those top prizes are still unclaimed.
+1. `sync_scratchers.py` loads the official game list page, follows the hyperlink for
+   every active game to that game's own detail page, and parses everything off it in
+   one pass: overall odds, the prize/claimed table, the "Prizes Claimed as of [date]"
+   line, ticket price, and the ticket's own image URL.
 2. `.github/workflows/daily-sync.yml` runs that script every day on a schedule and
    commits the result as `data.json`.
 3. Anything (like the ledger artifact) can fetch the current data with a plain HTTP
@@ -20,6 +21,13 @@ repo. No server, database, or hosting to maintain.
    ```
    https://raw.githubusercontent.com/<your-username>/<this-repo>/main/data.json
    ```
+
+Earlier versions of this script tried the bulk CSV Texas Lottery publishes plus a
+third-party odds-tracking site. Both had real problems: the bulk CSV lags behind
+newly-launched games (a game can have a live detail page days before it's added to the
+CSV), and the third-party site blocked automated requests outright. Scraping each
+game's own official page directly avoids both issues and is the actual first-party
+source for all of this data.
 
 ## One-time setup
 
@@ -37,31 +45,30 @@ repo. No server, database, or hosting to maintain.
 ```json
 [
   {
-    "name": "200X The Cash (New)",
-    "gameNumber": 2613,
+    "name": "$1,000,000 Crossword",
+    "gameNumber": 2753,
     "price": 20,
     "prize": 1000000,
-    "total": 4,
-    "remain": 4,
-    "asOf": "2026-07-16",
+    "total": 6,
+    "remain": 6,
+    "asOf": "2026-07-18",
     "odds": 3.41,
-    "oddsAsOf": "2026-07-16"
+    "oddsAsOf": "2026-07-18",
+    "imageUrl": "https://www.texaslottery.com/export/sites/lottery/Images/scratchoffs/2753_img1.gif"
   }
 ]
 ```
 
-- `price`, `prize`, `total`, `remain`, `asOf` come from Texas Lottery's own daily CSV --
-  authoritative, refreshed every run.
-- `odds` (overall odds of winning any prize, "1 in X") isn't in that CSV, but Texas
-  Lottery does publish it on each game's own individual page. This script visits every
-  active game's page directly and scrapes it from there -- first-party data, not a
-  third-party tracker (an earlier version tried a third-party site and got blocked with
-  an HTTP 403, which is common for sites protecting scraped data; texaslottery.com
-  itself has no reason to block this). `oddsAsOf` is the sync date, or `"verified
-  manually"` for the small static fallback list in `ODDS_OVERRIDES`, used only if a
-  specific game's page can't be reached that day.
-- Games are matched between sources by `gameNumber`, not name -- Texas Lottery reuses
-  names across different games release years apart, so name-matching alone is unreliable.
+Every field comes from the same source: that specific game's own detail page on
+texaslottery.com, fetched fresh each run. `asOf` is *that game's* own "Prizes Claimed
+as of" date -- these can differ slightly game to game, since Texas Lottery doesn't
+necessarily update every game's page on the same day.
+
+Games are matched by `gameNumber`, not name -- Texas Lottery reuses names across
+different games released years apart, so name-matching alone is unreliable.
+
+`ODDS_OVERRIDES` in the script is a small hand-verified fallback, used only if a
+specific game's page can't be reached or parsed on a given run.
 
 ## Notes
 

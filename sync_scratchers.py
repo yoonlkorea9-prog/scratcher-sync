@@ -2,42 +2,37 @@
 """
 Daily sync for the Scratcher Odds Ledger.
 
-Combines two official Texas Lottery sources:
-  1. The public CSV -- authoritative price/prize/remaining-prize counts, one row per
-     prize tier per game.
-  2. Each game's own detail page -- the actual source of "overall odds," which Texas
-     Lottery publishes per game but not in the bulk CSV. The game list page links every
-     game number to its detail page; this script visits each one and pulls the odds
-     sentence directly.
+Follows the same workflow a person would use by hand:
+  1. Load the official game list: texaslottery.com/.../Scratch_Offs/all.html
+  2. Find each game's hyperlink (its own detail page)
+  3. Visit that detail page
+  4. Parse everything off it: overall odds, the prize/claimed table, the
+     "Prizes Claimed as of [date]" line, and the ticket image URL
 
-This avoids depending on third-party trackers (which may rate-limit or block automated
-requests) since the data comes straight from texaslottery.com in both cases.
-
-Games are matched between the two by game number -- Texas Lottery reuses game *names*
-across different eras, so numbers are the only reliable key.
-
-Output: data.json, matching the ledger's import schema.
+This replaces an earlier version that combined the bulk CSV (which lags behind
+newly-launched games) with a third-party odds site (which blocked automated
+requests). Pulling everything from each game's own official page fixes both:
+every game listed on the site gets picked up the same day it appears there,
+and there's no dependency on anything but texaslottery.com itself.
 
 Usage:
     python sync_scratchers.py > data.json
 """
-import csv
-import io
+import html as html_lib
 import json
 import re
 import sys
 import time
 import urllib.request
-from datetime import date
+from datetime import date, datetime
 
-CSV_URL = "https://www.texaslottery.com/export/sites/lottery/Games/Scratch_Offs/scratchoff.csv"
 GAME_LIST_URL = "https://www.texaslottery.com/export/sites/lottery/Games/Scratch_Offs/all.html"
+BASE = "https://www.texaslottery.com"
 HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; ScratcherLedgerSync/1.0)"}
+REQUEST_DELAY = 0.3  # seconds between requests, to be polite to their server
 
-# Guaranteed baseline: verified "1 in X" overall odds, confirmed against official filings
-# by hand. Used only if a game's own detail page can't be reached or parsed for some reason --
-# the live per-game scrape below is the primary source now, since it's first-party and doesn't
-# depend on a third-party tracker that may block automated requests.
+# Guaranteed fallback for a small number of hand-verified games, used only if a
+# specific page can't be reached or parsed that day.
 ODDS_OVERRIDES = {
     2613: 3.41,
     2753: 3.41,
@@ -61,124 +56,135 @@ def fetch(url):
         return resp.read().decode("utf-8", errors="replace")
 
 
-def parse_prize_data(csv_text):
-    """For each game number, keep only the highest-value ('top') prize row."""
-    reader = csv.DictReader(io.StringIO(csv_text.split("\n", 1)[1]))  # skip title line
-    best = {}
-    for row in reader:
-        try:
-            game_num = int(row["Game Number"])
-            level = row["Prize Level"].strip()
-            if level.upper() == "TOTAL":
-                continue
-            prize_amount = float(level.replace("$", "").replace(",", ""))
-            total = int(row["Total Prizes in Level"].replace(",", ""))
-            claimed_raw = row["Prizes Claimed"].strip().replace(",", "")
-            claimed = int(claimed_raw) if claimed_raw not in ("", "---") else 0
-            name = row["Game Name"].strip()
-            price = row.get("Ticket Price", "").strip()
-        except (KeyError, ValueError):
-            continue
-
-        current = best.get(game_num)
-        if current is None or prize_amount > current["prize"]:
-            best[game_num] = {
-                "name": name,
-                "gameNumber": game_num,
-                "price": float(price) if price else None,
-                "prize": prize_amount,
-                "total": total,
-                "remain": max(total - claimed, 0),
-            }
-    return best
-
-
-def get_detail_page_links(html):
+def get_detail_page_links(list_html):
     """
-    Extract (game_number -> absolute detail page URL) from the official game list page.
-    Texas Lottery links each game number directly to its own detail page, e.g.
-    <a href="/export/.../details.html_252699703.html">2613</a> -- the link TEXT is the
-    game number, which is the only reliable identifier (names get reused across eras).
+    Game numbers are hyperlinked to their own detail page on the list page, e.g.
+    <a href="/export/.../details.html_252698618.html">2753</a>. The link TEXT is
+    the game number -- the only reliable identifier (names get reused over the years).
     """
     links = {}
     pattern = re.compile(
         r'<a[^>]+href="([^"]*details\.html_\d+\.html)"[^>]*>\s*(\d{3,4})\s*</a>',
         re.IGNORECASE
     )
-    for href, game_num_str in pattern.findall(html):
-        url = href if href.startswith("http") else "https://www.texaslottery.com" + href
+    for href, game_num_str in pattern.findall(list_html):
+        url = href if href.startswith("http") else BASE + href
         links[int(game_num_str)] = url
     return links
 
 
-def extract_odds_from_detail_page(html):
-    """Pull the '1 in X' overall odds figure out of a game's own detail page."""
-    match = re.search(
-        r"overall odds[^0-9]{0,80}1\s*in\s*([0-9]+(?:\.[0-9]+)?)",
-        html,
-        re.IGNORECASE
+def parse_prize_table(html):
+    """Pulls (amount, printed, claimed) rows out of the 'Prizes Printed' table."""
+    rows = []
+    row_re = re.compile(r"<tr[^>]*>(.*?)</tr>", re.DOTALL | re.IGNORECASE)
+    cell_re = re.compile(r"<t[dh][^>]*>(.*?)</t[dh]>", re.DOTALL | re.IGNORECASE)
+    tag_re = re.compile(r"<[^>]+>")
+
+    for row_match in row_re.finditer(html):
+        cells = cell_re.findall(row_match.group(1))
+        if len(cells) < 3:
+            continue
+        clean = [html_lib.unescape(tag_re.sub("", c)).strip() for c in cells[:3]]
+        amount_str = clean[0].replace("$", "").replace(",", "").strip()
+        printed_str = clean[1].replace(",", "").strip()
+        claimed_str = clean[2].replace(",", "").strip()
+        try:
+            amount = float(amount_str)
+            printed = int(printed_str)
+        except ValueError:
+            continue  # header row or something else entirely
+        claimed = 0 if claimed_str in ("", "---", "\u2014") else (
+            int(claimed_str) if claimed_str.isdigit() else 0
+        )
+        rows.append((amount, printed, claimed))
+    return rows
+
+
+def parse_detail_page(html, game_number):
+    """Extracts everything the ledger needs from one game's detail page."""
+    result = {"gameNumber": game_number}
+
+    # Name + odds come from one sentence: "Overall odds of winning any prize in
+    # {NAME} are 1 in {X}." -- reliable across every page checked so far.
+    m = re.search(
+        r"Overall odds of winning any prize in\s+(.+?)\s+are\s+1\s*in\s*([0-9]+(?:\.[0-9]+)?)",
+        html, re.IGNORECASE | re.DOTALL
     )
-    return float(match.group(1)) if match else None
+    if m:
+        result["name"] = html_lib.unescape(re.sub(r"<[^>]+>", "", m.group(1))).strip()
+        result["odds"] = float(m.group(2))
+
+    # Per-game "as of" date, e.g. "Prizes Claimed as of July 18, 2026."
+    m = re.search(r"Prizes Claimed as of\s+([A-Za-z]+ \d{1,2},\s*\d{4})", html, re.IGNORECASE)
+    if m:
+        try:
+            result["asOf"] = datetime.strptime(m.group(1).strip(), "%B %d, %Y").date().isoformat()
+        except ValueError:
+            pass
+
+    # Ticket price, e.g. "$20 Dollar Game Game Features"
+    m = re.search(r"\$?(\d+(?:\.\d+)?)\s*Dollar Game", html, re.IGNORECASE)
+    if m:
+        result["price"] = float(m.group(1))
+
+    # Front ticket image
+    m = re.search(r'(https://www\.texaslottery\.com/export/sites/lottery/Images/scratchoffs/\d+_img1\.\w+)', html)
+    if not m:
+        m = re.search(r'src="(/export/sites/lottery/Images/scratchoffs/\d+_img1\.\w+)"', html)
+        if m:
+            result["imageUrl"] = BASE + m.group(1)
+    else:
+        result["imageUrl"] = m.group(1)
+
+    # Top prize tier from the "Prizes Printed" table
+    rows = parse_prize_table(html)
+    if rows:
+        top = max(rows, key=lambda r: r[0])
+        result["prize"] = top[0]
+        result["total"] = top[1]
+        result["remain"] = max(top[1] - top[2], 0)
+
+    return result
 
 
-def fetch_official_odds(game_numbers, delay=0.3):
-    """
-    For each game number, find its detail page and scrape the real overall odds off it --
-    the actual first-party Texas Lottery source, not a third-party aggregator.
-    """
-    odds = {}
+def main():
     today = date.today().isoformat()
     try:
         list_html = fetch(GAME_LIST_URL)
         links = get_detail_page_links(list_html)
     except Exception as e:
-        print(f"WARNING could not load game list page: {e}", file=sys.stderr)
-        return odds
+        print(f"ERROR: could not load game list page: {e}", file=sys.stderr)
+        sys.exit(1)
 
-    for game_num in game_numbers:
-        url = links.get(game_num)
-        if not url:
-            continue
+    output = []
+    errors = 0
+    for game_number, url in sorted(links.items()):
         try:
             detail_html = fetch(url)
-            val = extract_odds_from_detail_page(detail_html)
-            if val is not None:
-                odds[game_num] = {"odds": val, "oddsAsOf": today}
+            g = parse_detail_page(detail_html, game_number)
+
+            if "odds" not in g and game_number in ODDS_OVERRIDES:
+                g["odds"] = ODDS_OVERRIDES[game_number]
+            g["oddsAsOf"] = g.get("asOf") if "odds" in g else None
+            g.setdefault("asOf", today)
+            g.setdefault("odds", None)
+
+            # Skip anything we couldn't get the essentials for (name/price/prize).
+            if "name" in g and "price" in g and "prize" in g:
+                output.append(g)
+            else:
+                errors += 1
+                print(f"WARNING: incomplete data for game {game_number}, skipped", file=sys.stderr)
         except Exception as e:
-            print(f"WARNING could not fetch odds for game {game_num}: {e}", file=sys.stderr)
-        time.sleep(delay)  # be polite to their server
-    return odds
-
-
-def main():
-    try:
-        csv_text = fetch(CSV_URL)
-        prize_data = parse_prize_data(csv_text)
-    except Exception as e:
-        print(f"ERROR fetching official prize data: {e}", file=sys.stderr)
-        prize_data = {}
-
-    odds_data = fetch_official_odds(prize_data.keys())
-
-    today = date.today().isoformat()
-    output = []
-    for game_num, g in prize_data.items():
-        g["asOf"] = today
-        odds_info = odds_data.get(game_num)
-        if odds_info:
-            g["odds"] = odds_info["odds"]
-            g["oddsAsOf"] = odds_info["oddsAsOf"]
-        elif game_num in ODDS_OVERRIDES:
-            g["odds"] = ODDS_OVERRIDES[game_num]
-            g["oddsAsOf"] = "verified manually"
-        else:
-            g["odds"] = None
-            g["oddsAsOf"] = None
-        output.append(g)
+            errors += 1
+            print(f"WARNING: failed on game {game_number} ({url}): {e}", file=sys.stderr)
+        time.sleep(REQUEST_DELAY)
 
     output.sort(key=lambda g: g["name"])
     json.dump(output, sys.stdout, indent=2)
-    print(f"\nWrote {len(output)} games ({sum(1 for g in output if g['odds'])} with odds)", file=sys.stderr)
+    with_odds = sum(1 for g in output if g["odds"])
+    with_img = sum(1 for g in output if g.get("imageUrl"))
+    print(f"\nWrote {len(output)} games ({with_odds} with odds, {with_img} with images, {errors} errors)", file=sys.stderr)
 
 
 if __name__ == "__main__":

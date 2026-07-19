@@ -478,7 +478,8 @@ async function mergeSnapshot(incoming){
       prize: item.prize || 0,
       remain: (item.remain === undefined || item.remain === null) ? null : parseFloat(item.remain),
       total: (item.total === undefined || item.total === null) ? null : parseFloat(item.total),
-      asOf: item.asOf || null
+      asOf: item.asOf || null,
+      imageUrl: item.imageUrl || null
     };
     if(match){ Object.assign(match, clean); updated++; }
     else{ games.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2,6), ...clean }); added++; }
@@ -630,9 +631,13 @@ function render(){
       <div class="row ${(isBestOdds||isBestRemain) ? 'best' : ''}">
         <div class="rank">${i+1}</div>
         <div class="thumb">
-          ${g.gameNumber
-            ? `<img src="https://www.texaslottery.com/export/sites/lottery/Images/scratchoffs/${g.gameNumber}_img1.gif" alt="${escapeHtml(g.name)}" loading="lazy" onerror="this.onerror=null;this.src='${ticketSvg(g)}';" onclick="openLightbox(this.src, '${escapeHtml(g.name).replace(/'/g, "\\'")}')">`
-            : `<img src="${ticketSvg(g)}" alt="${escapeHtml(g.name)}" onclick="openLightbox(this.src, '${escapeHtml(g.name).replace(/'/g, "\\'")}')">`}
+          ${(() => {
+            const src = g.imageUrl || (g.gameNumber ? `https://www.texaslottery.com/export/sites/lottery/Images/scratchoffs/${g.gameNumber}_img1.gif` : null);
+            const nameEsc = escapeHtml(g.name).replace(/'/g, "\\'");
+            return src
+              ? `<img src="${src}" alt="${escapeHtml(g.name)}" loading="lazy" onerror="this.onerror=null;this.src='${ticketSvg(g)}';" onclick="openLightbox(this.src, '${nameEsc}')">`
+              : `<img src="${ticketSvg(g)}" alt="${escapeHtml(g.name)}" onclick="openLightbox(this.src, '${nameEsc}')">`;
+          })()}
         </div>
         <div class="name">${escapeHtml(g.name)}${isBestOdds ? '<span class="badge">Best odds</span>' : ''}${isBestRemain ? '<span class="badge">Freshest</span>' : ''}${remainBadge}
           <span class="price">$${g.price} ticket${g.gameNumber ? ' &middot; Game #' + g.gameNumber : ''}${g.asOf ? ' &middot; as of ' + g.asOf : ''}
