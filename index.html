@@ -262,6 +262,38 @@
     <div class="label" id="last-sync-label" style="margin-top:8px;">Never synced from a live source yet.</div>
   </header>
 
+  <details class="slip">
+    <summary style="cursor:pointer; font-family:'Barlow Condensed', sans-serif; font-weight:700; font-size:15px; letter-spacing:0.14em; text-transform:uppercase; color: var(--gold);">Store search</summary>
+    <div class="sub" style="margin:12px 0;">
+      Check which of your tracked games are confirmed sold at a specific chain, in a specific city &mdash;
+      pulled live from Texas Lottery's own retailer locator. Checking all games takes about 20-30 seconds.
+    </div>
+    <div class="grid">
+      <div>
+        <label>City (as listed on texaslottery.com)</label>
+        <input id="store-city" type="text" placeholder="FRISCO">
+      </div>
+      <div>
+        <label>Store chain</label>
+        <input id="store-chain" type="text" placeholder="7-ELEVEN">
+      </div>
+    </div>
+    <div class="actions">
+      <button id="store-search-btn">Search all tracked games</button>
+    </div>
+    <div class="err" id="store-search-msg"></div>
+    <div id="store-results" style="margin-top:14px;"></div>
+
+    <div style="margin-top:16px; padding-top:14px; border-top:1px dashed var(--line);">
+      <label>Worker URL (one-time setup &mdash; see store-locator-worker.js)</label>
+      <input id="worker-url" type="url" placeholder="https://your-worker.your-subdomain.workers.dev">
+      <div class="actions">
+        <button id="save-worker-btn">Save</button>
+      </div>
+      <div class="err" id="worker-msg"></div>
+    </div>
+  </details>
+
   <details class="slip" id="sync-panel">
     <summary style="cursor:pointer; font-family:'Barlow Condensed', sans-serif; font-weight:700; font-size:15px; letter-spacing:0.14em; text-transform:uppercase; color: var(--gold);">Sync data &amp; settings</summary>
     <div class="sub" style="margin:12px 0;">
@@ -566,6 +598,11 @@ async function load(){
   }catch(e){ /* never synced */ }
 
   try{
+    const workerRes = await storageAPI.get('scratcher_worker_url');
+    if(workerRes && workerRes.value) document.getElementById('worker-url').value = workerRes.value;
+  }catch(e){ /* not set */ }
+
+  try{
     const src = await storageAPI.get('scratcher_source_url');
     const sourceUrl = (src && src.value) ? src.value : DEFAULT_SOURCE_URL;
     document.getElementById('source-url').value = sourceUrl;
@@ -756,6 +793,94 @@ document.getElementById('clear-btn').addEventListener('click', async () => {
 document.getElementById('sort-select').addEventListener('change', (e) => {
   sortMode = e.target.value;
   render();
+});
+
+document.getElementById('save-worker-btn').addEventListener('click', async () => {
+  const url = document.getElementById('worker-url').value.trim();
+  const msg = document.getElementById('worker-msg');
+  if(!url){ msg.className = 'err'; msg.textContent = 'Paste your Worker URL first.'; return; }
+  await storageAPI.set('scratcher_worker_url', url);
+  msg.className = 'err good';
+  msg.textContent = 'Saved.';
+});
+
+function chunk(arr, size){
+  const out = [];
+  for(let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+  return out;
+}
+
+document.getElementById('store-search-btn').addEventListener('click', async () => {
+  const msg = document.getElementById('store-search-msg');
+  const resultsEl = document.getElementById('store-results');
+  const city = document.getElementById('store-city').value.trim();
+  const chainName = document.getElementById('store-chain').value.trim();
+
+  if(!city || !chainName){ msg.className = 'err'; msg.textContent = 'Enter both a city and a chain name.'; return; }
+
+  let workerUrl;
+  try{
+    const saved = await storageAPI.get('scratcher_worker_url');
+    workerUrl = saved && saved.value;
+  }catch(e){ /* not set */ }
+  if(!workerUrl){
+    msg.className = 'err';
+    msg.textContent = 'Set up the Worker URL below first (one-time setup -- see store-locator-worker.js).';
+    return;
+  }
+  if(games.length === 0){
+    msg.className = 'err';
+    msg.textContent = 'No games loaded to check yet.';
+    return;
+  }
+
+  const batches = chunk(games.map(g => ({gameNumber: g.gameNumber, name: g.name})).filter(g => g.gameNumber), 50);
+  msg.className = 'err';
+  msg.textContent = `Checking ${games.length} games across ${batches.length} batch(es)... this takes about 20-30 seconds.`;
+  resultsEl.innerHTML = '';
+
+  let allResults = [];
+  try{
+    for(let i = 0; i < batches.length; i++){
+      msg.textContent = `Checking batch ${i+1} of ${batches.length}...`;
+      const res = await fetch(workerUrl, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({city, chain: chainName, games: batches[i]})
+      });
+      if(!res.ok){
+        const errBody = await res.json().catch(() => ({}));
+        throw new Error(errBody.error || ('HTTP ' + res.status));
+      }
+      const batchResults = await res.json();
+      allResults = allResults.concat(batchResults);
+    }
+  }catch(e){
+    msg.className = 'err';
+    msg.textContent = 'Search failed: ' + e.message;
+    return;
+  }
+
+  if(allResults.length === 0){
+    msg.className = 'err';
+    msg.textContent = `No matches for "${chainName}" in ${city}.`;
+    return;
+  }
+
+  msg.className = 'err good';
+  const totalLocations = allResults.reduce((sum, g) => sum + g.locations.length, 0);
+  msg.textContent = `${allResults.length} of ${games.length} games confirmed at "${chainName}" in ${city} (${totalLocations} location(s)).`;
+
+  resultsEl.innerHTML = allResults.map(g => `
+    <div style="margin-bottom:14px;">
+      <div style="font-weight:700; color:var(--gold); font-size:13px;">${escapeHtml(g.name)} <span style="color:rgba(241,237,226,0.5); font-weight:400;">#${g.gameNumber}</span></div>
+      ${g.locations.map(loc => `
+        <div style="font-size:11.5px; margin:4px 0 4px 8px;">
+          <a href="${loc.mapsUrl}" target="_blank" rel="noopener" style="color:var(--good);">${escapeHtml(loc.name)} \u2014 ${escapeHtml(loc.address)}, ${escapeHtml(loc.city)}</a>
+        </div>
+      `).join('')}
+    </div>
+  `).join('');
 });
 
 function normName(s){ return (s||'').trim().toLowerCase(); }
