@@ -378,6 +378,10 @@ const STORE_KEY = 'scratcher_games';
 let games = [];
 let sortMode = 'remain';
 
+// Hardcoded default so the ledger auto-syncs out of the box, with no manual setup step
+// needed after a redeploy. The Sync panel can still override this by saving a different URL.
+const DEFAULT_SOURCE_URL = 'https://raw.githubusercontent.com/yoonlkorea9-prog/scratcher-sync/main/data.json';
+
 // window.storage only exists inside Claude's artifact viewer. On a standalone page
 // (e.g. hosted on GitHub Pages), it's undefined -- so everything silently failed to
 // persist there. This falls back to localStorage, the correct mechanism for a real
@@ -563,11 +567,13 @@ async function load(){
 
   try{
     const src = await storageAPI.get('scratcher_source_url');
-    if(src && src.value){
-      document.getElementById('source-url').value = src.value;
-      fetchFromSource(src.value, true);
-    }
-  }catch(e){ /* no source configured */ }
+    const sourceUrl = (src && src.value) ? src.value : DEFAULT_SOURCE_URL;
+    document.getElementById('source-url').value = sourceUrl;
+    fetchFromSource(sourceUrl, true);
+  }catch(e){
+    document.getElementById('source-url').value = DEFAULT_SOURCE_URL;
+    fetchFromSource(DEFAULT_SOURCE_URL, true);
+  }
 }
 
 async function save(){

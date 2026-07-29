@@ -1,0 +1,38 @@
+# Save this file as: .github/workflows/check-store.yml
+#
+# Run it from: your repo's Actions tab -> "Check store availability" -> "Run workflow"
+# You'll be prompted for a City and a Chain name -- results appear in the run's Summary tab
+# as a clickable list: each store's name + address links straight to Google Maps.
+#
+# This does NOT run on a schedule -- it's on-demand only, since it's specific to whatever
+# city/chain you're asking about right now.
+
+name: Check store availability
+
+on:
+  workflow_dispatch:
+    inputs:
+      city:
+        description: 'City (as listed on texaslottery.com, e.g. FRISCO)'
+        required: true
+        default: 'FRISCO'
+      chain:
+        description: 'Store chain name to match (e.g. 7-ELEVEN, WALMART, KROGER, CIRCLE K)'
+        required: true
+        default: '7-ELEVEN'
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Run availability check
+        run: |
+          python3 check_store_availability.py \
+            --city "${{ github.event.inputs.city }}" \
+            --chain "${{ github.event.inputs.chain }}" \
+            --games-file data.json
+
+      - name: Write summary
+        run: cat summary.md >> $GITHUB_STEP_SUMMARY
