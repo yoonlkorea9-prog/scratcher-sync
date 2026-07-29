@@ -229,7 +229,7 @@
   },
   {
     "gameNumber": 2735,
-    "name": "3-2 Won!",
+    "name": "3-2-Won!",
     "odds": 4.68,
     "asOf": "2026-07-27",
     "price": 1.0,
@@ -249,6 +249,18 @@
     "prize": 60000.0,
     "total": 6,
     "remain": 4,
+    "oddsAsOf": "2026-07-27"
+  },
+  {
+    "gameNumber": 2589,
+    "name": "500X",
+    "odds": 3.36,
+    "asOf": "2026-07-27",
+    "price": 50.0,
+    "imageUrl": "https://www.texaslottery.com/export/sites/lottery/Images/scratchoffs/2589_img1.gif",
+    "prize": 1000000.0,
+    "total": 15,
+    "remain": 2,
     "oddsAsOf": "2026-07-27"
   },
   {
@@ -439,6 +451,18 @@
     "price": 20.0,
     "imageUrl": "https://www.texaslottery.com/export/sites/lottery/Images/scratchoffs/2685_img1.gif",
     "prize": 1000000.0,
+    "total": 4,
+    "remain": 2,
+    "oddsAsOf": "2026-07-27"
+  },
+  {
+    "gameNumber": 2683,
+    "name": "Emerald 7s",
+    "odds": 4.23,
+    "asOf": "2026-07-27",
+    "price": 5.0,
+    "imageUrl": "https://www.texaslottery.com/export/sites/lottery/Images/scratchoffs/2683_img1.gif",
+    "prize": 200000.0,
     "total": 4,
     "remain": 2,
     "oddsAsOf": "2026-07-27"
@@ -705,6 +729,18 @@
     "prize": 30000.0,
     "total": 5,
     "remain": 3,
+    "oddsAsOf": "2026-07-27"
+  },
+  {
+    "gameNumber": 2725,
+    "name": "Power 20s",
+    "odds": 3.61,
+    "asOf": "2026-07-27",
+    "price": 20.0,
+    "imageUrl": "https://www.texaslottery.com/export/sites/lottery/Images/scratchoffs/2725_img1.gif",
+    "prize": 1000000.0,
+    "total": 4,
+    "remain": 2,
     "oddsAsOf": "2026-07-27"
   },
   {
