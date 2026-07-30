@@ -277,7 +277,7 @@
         </div>
       </div>
       <div>
-        <label>Store chain (optional \u2014 leave blank to see every store)</label>
+        <label>Store chain (optional)</label>
         <input id="store-chain" type="text" placeholder="7-ELEVEN, or leave blank">
       </div>
     </div>
@@ -904,7 +904,7 @@ document.getElementById('use-location-btn').addEventListener('click', () => {
         const accuracyNote = accuracy ? ` (accurate to ~${Math.round(accuracy)}m)` : '';
         const coordsShort = `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
         const verifyUrl = `https://www.google.com/maps?q=${latitude},${longitude}`;
-        msg.innerHTML = `Detected: ${escapeHtml(city)}${userZip ? ' ' + escapeHtml(userZip) : ''}${accuracyNote}. Coordinates: ${coordsShort} \u2014 <a href="${verifyUrl}" target="_blank" rel="noopener" style="color:var(--good);">verify on Maps</a>. Wrong city? Edit the field below \u2014 it'll be remembered.`;
+        msg.innerHTML = `Detected: ${escapeHtml(city)}${userZip ? ' ' + escapeHtml(userZip) : ''}${accuracyNote}. Coordinates: ${coordsShort} \u2014 <a href="${verifyUrl}" target="_blank" rel="noopener" style="color:var(--good);">verify on Maps</a>. Wrong city? Edit the City field above \u2014 it'll be remembered for next time.`;
       }catch(e){
         msg.className = 'err';
         msg.textContent = 'Got your location but couldn\u2019t determine the city name. Enter it manually.';
