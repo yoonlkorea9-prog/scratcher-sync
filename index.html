@@ -263,7 +263,7 @@
   </header>
 
   <details class="slip">
-    <summary style="cursor:pointer; font-family:'Barlow Condensed', sans-serif; font-weight:700; font-size:15px; letter-spacing:0.14em; text-transform:uppercase; color: var(--gold);">Search</summary>
+    <summary style="cursor:pointer; font-family:'Barlow Condensed', sans-serif; font-weight:700; font-size:15px; letter-spacing:0.14em; text-transform:uppercase; color: var(--gold);">Store search</summary>
     <div class="sub" style="margin:12px 0;">
       Check which of your tracked games are confirmed sold at a specific chain, in a specific city &mdash;
       pulled live from Texas Lottery's own retailer locator. Checking all games takes about 5-10 seconds.
@@ -881,6 +881,9 @@ function chunk(arr, size){
 let userZip = null; // set when geolocation succeeds
 let userCoords = null; // {lat, lng} -- only sent to the Worker if you use "Use my location"
 let detectedCity = null; // suggested city from geolocation -- only applied on explicit "Update" click
+let searchGeneration = 0; // guards against race conditions between overlapping searches (e.g. an
+                            // auto-run-on-load search still in flight when you start a new manual one) --
+                            // only the most recently started search is ever allowed to write its results.
 
 // Texas Lottery's form is backed by a fixed dropdown of city names, all upper-case
 // (e.g. "PROSPER"). Manual typing in normal case silently returns zero results since
@@ -957,6 +960,7 @@ document.getElementById('use-location-btn').addEventListener('click', () => {
 });
 
 async function runStoreSearch(isAuto){
+  const myGeneration = ++searchGeneration; // this invocation is now the "latest" -- any older one in flight will notice and stop
   const msg = document.getElementById('store-search-msg');
   const city = document.getElementById('store-city').value.trim().toUpperCase();
   const chainName = document.getElementById('store-chain').value.trim();
@@ -989,6 +993,8 @@ async function runStoreSearch(isAuto){
     return;
   }
 
+  if(myGeneration !== searchGeneration) return; // a newer search started while we were still setting up
+
   // Clear any results from a previous search before starting a new one, so stale
   // matches from a different city/chain/price don't linger on rows that no longer apply.
   games.forEach(g => { g.storeLocations = null; });
@@ -1006,6 +1012,7 @@ async function runStoreSearch(isAuto){
   let allResults = [];
   try{
     for(let i = 0; i < batches.length; i++){
+      if(myGeneration !== searchGeneration) return; // a newer search took over -- stop fetching, don't write anything
       msg.textContent = (userCoords
         ? `Batch ${i+1} of ${batches.length}: checking games, then geocoding store locations for distance...`
         : `Checking batch ${i+1} of ${batches.length}...`);
@@ -1024,10 +1031,13 @@ async function runStoreSearch(isAuto){
       allResults = allResults.concat(batchResults);
     }
   }catch(e){
+    if(myGeneration !== searchGeneration) return; // superseded -- don't show a stale error over a newer search's progress
     msg.className = 'err';
     msg.textContent = (isAuto ? 'Auto-search failed: ' : 'Search failed: ') + e.message;
     return;
   }
+
+  if(myGeneration !== searchGeneration) return; // a newer search finished first and already owns the display now
 
   if(allResults.length === 0){
     msg.className = 'err';
