@@ -609,6 +609,18 @@ async function load(){
   }
 
   try{
+    const lastSearch = await storageAPI.get('scratcher_last_store_search');
+    if(lastSearch && lastSearch.value){
+      const {city, chain} = JSON.parse(lastSearch.value);
+      if(city){
+        document.getElementById('store-city').value = city;
+        if(chain) document.getElementById('store-chain').value = chain;
+        runStoreSearch(true); // fast path only -- no geolocation/distance-sort without a fresh click
+      }
+    }
+  }catch(e){ /* no prior search */ }
+
+  try{
     const src = await storageAPI.get('scratcher_source_url');
     const sourceUrl = (src && src.value) ? src.value : DEFAULT_SOURCE_URL;
     document.getElementById('source-url').value = sourceUrl;
@@ -877,7 +889,7 @@ document.getElementById('use-location-btn').addEventListener('click', () => {
 
   navigator.geolocation.getCurrentPosition(
     async (position) => {
-      const {latitude, longitude} = position.coords;
+      const {latitude, longitude, accuracy} = position.coords;
       userCoords = {lat: latitude, lng: longitude};
       msg.textContent = 'Location granted \u2014 looking up your city...';
       try{
@@ -889,7 +901,8 @@ document.getElementById('use-location-btn').addEventListener('click', () => {
         if(!city){ throw new Error('Could not determine city'); }
         document.getElementById('store-city').value = city;
         msg.className = 'err good';
-        msg.textContent = `Detected: ${city}${userZip ? ' (' + userZip + ')' : ''}. Search will sort by real distance from you.`;
+        const accuracyNote = accuracy ? ` (accurate to ~${Math.round(accuracy)}m)` : '';
+        msg.textContent = `Detected: ${city}${userZip ? ' ' + userZip : ''}${accuracyNote}. Not right? Just edit the City field manually below.`;
       }catch(e){
         msg.className = 'err';
         msg.textContent = 'Got your location but couldn\u2019t determine the city name. Enter it manually.';
@@ -904,16 +917,16 @@ document.getElementById('use-location-btn').addEventListener('click', () => {
         msg.textContent = 'Couldn\u2019t get your location (' + error.message + '). Enter your city manually.';
       }
     },
-    {timeout: 10000}
+    {timeout: 15000, enableHighAccuracy: true}
   );
 });
 
-document.getElementById('store-search-btn').addEventListener('click', async () => {
+async function runStoreSearch(isAuto){
   const msg = document.getElementById('store-search-msg');
   const city = document.getElementById('store-city').value.trim();
   const chainName = document.getElementById('store-chain').value.trim();
 
-  if(!city){ msg.className = 'err'; msg.textContent = 'Enter a city.'; return; }
+  if(!city){ if(!isAuto){ msg.className = 'err'; msg.textContent = 'Enter a city.'; } return; }
   const chainLabel = chainName ? `"${chainName}"` : 'any store';
   const chainSuffix = chainName ? ` at "${chainName}"` : '';
 
@@ -924,8 +937,7 @@ document.getElementById('store-search-btn').addEventListener('click', async () =
   }catch(e){ /* fall back to default */ }
 
   if(games.length === 0){
-    msg.className = 'err';
-    msg.textContent = 'No games loaded to check yet.';
+    if(!isAuto){ msg.className = 'err'; msg.textContent = 'No games loaded to check yet.'; }
     return;
   }
 
@@ -934,11 +946,14 @@ document.getElementById('store-search-btn').addEventListener('click', async () =
   games.forEach(g => { g.storeLocations = null; });
   render();
 
+  // Auto-runs on page load never carry fresh geolocation (that always needs your
+  // explicit click, since browsers require a user gesture for the permission prompt),
+  // so userCoords is naturally null here and this automatically takes the fast path.
   const batches = chunk(games.map(g => ({gameNumber: g.gameNumber, name: g.name})).filter(g => g.gameNumber), 50);
   msg.className = 'err';
-  msg.textContent = userCoords
-    ? `Checking ${games.length} games and sorting by real distance from you... this can take a minute or two.`
-    : `Checking ${games.length} games across ${batches.length} batch(es)... this takes about 5-10 seconds.`;
+  msg.textContent = (isAuto ? 'Auto-checking last search: ' : '') + (userCoords
+    ? `${games.length} games, sorting by real distance from you... this can take a minute or two.`
+    : `${games.length} games across ${batches.length} batch(es)... this takes about 5-10 seconds.`);
 
   let allResults = [];
   try{
@@ -962,7 +977,7 @@ document.getElementById('store-search-btn').addEventListener('click', async () =
     }
   }catch(e){
     msg.className = 'err';
-    msg.textContent = 'Search failed: ' + e.message;
+    msg.textContent = (isAuto ? 'Auto-search failed: ' : 'Search failed: ') + e.message;
     return;
   }
 
@@ -991,7 +1006,12 @@ document.getElementById('store-search-btn').addEventListener('click', async () =
   const totalLocations = allResults.reduce((sum, g) => sum + g.locations.length, 0);
   msg.textContent = `${allResults.length} of ${games.length} games confirmed${chainSuffix} in ${city} (${totalLocations} location(s)) \u2014 shown under each ticket below.`;
   render();
-});
+
+  try{ await storageAPI.set('scratcher_last_store_search', JSON.stringify({city, chain: chainName})); }
+  catch(e){ /* not critical */ }
+}
+
+document.getElementById('store-search-btn').addEventListener('click', () => runStoreSearch(false));
 
 function normName(s){ return (s||'').trim().toLowerCase(); }
 
