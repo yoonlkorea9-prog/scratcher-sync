@@ -263,7 +263,7 @@
   </header>
 
   <details class="slip">
-    <summary style="cursor:pointer; font-family:'Barlow Condensed', sans-serif; font-weight:700; font-size:15px; letter-spacing:0.14em; text-transform:uppercase; color: var(--gold);">Store search</summary>
+    <summary style="cursor:pointer; font-family:'Barlow Condensed', sans-serif; font-weight:700; font-size:15px; letter-spacing:0.14em; text-transform:uppercase; color: var(--gold);">Search</summary>
     <div class="sub" style="margin:12px 0;">
       Check which of your tracked games are confirmed sold at a specific chain, in a specific city &mdash;
       pulled live from Texas Lottery's own retailer locator. Checking all games takes about 5-10 seconds.
@@ -279,6 +279,10 @@
       <div>
         <label>Store chain (optional)</label>
         <input id="store-chain" type="text" placeholder="7-ELEVEN, or leave blank">
+      </div>
+      <div>
+        <label>Ticket price (optional)</label>
+        <input id="store-price" type="number" min="0" step="1" placeholder="5">
       </div>
     </div>
     <div class="actions">
@@ -611,10 +615,11 @@ async function load(){
   try{
     const lastSearch = await storageAPI.get('scratcher_last_store_search');
     if(lastSearch && lastSearch.value){
-      const {city, chain} = JSON.parse(lastSearch.value);
+      const {city, chain, price} = JSON.parse(lastSearch.value);
       if(city){
         document.getElementById('store-city').value = city;
         if(chain) document.getElementById('store-chain').value = chain;
+        if(price) document.getElementById('store-price').value = price;
         runStoreSearch(true); // fast path only -- no geolocation/distance-sort without a fresh click
       }
     }
@@ -877,8 +882,8 @@ let userZip = null; // set when geolocation succeeds
 let userCoords = null; // {lat, lng} -- only sent to the Worker if you use "Use my location"
 let detectedCity = null; // suggested city from geolocation -- only applied on explicit "Update" click
 
-// Texas Lottery's form is backed by a fixed dropdown of city names, all upper-case.
-// Manual typing in normal case silently returns zero results since
+// Texas Lottery's form is backed by a fixed dropdown of city names, all upper-case
+// (e.g. "PROSPER"). Manual typing in normal case silently returns zero results since
 // their backend does an exact match -- auto-uppercase as-you-type fixes this at the source.
 document.getElementById('store-city').addEventListener('input', (e) => {
   const pos = e.target.selectionStart;
@@ -955,10 +960,13 @@ async function runStoreSearch(isAuto){
   const msg = document.getElementById('store-search-msg');
   const city = document.getElementById('store-city').value.trim().toUpperCase();
   const chainName = document.getElementById('store-chain').value.trim();
+  const priceRaw = document.getElementById('store-price').value.trim();
+  const priceFilter = priceRaw === '' ? null : parseFloat(priceRaw);
 
   if(!city){ if(!isAuto){ msg.className = 'err'; msg.textContent = 'Enter a city.'; } return; }
   const chainLabel = chainName ? `"${chainName}"` : 'any store';
   const chainSuffix = chainName ? ` at "${chainName}"` : '';
+  const priceSuffix = (priceFilter !== null && !isNaN(priceFilter)) ? ` $${priceFilter}` : '';
 
   let workerUrl = DEFAULT_WORKER_URL;
   try{
@@ -966,24 +974,34 @@ async function runStoreSearch(isAuto){
     if(saved && saved.value) workerUrl = saved.value;
   }catch(e){ /* fall back to default */ }
 
-  if(games.length === 0){
-    if(!isAuto){ msg.className = 'err'; msg.textContent = 'No games loaded to check yet.'; }
+  let gamesToCheck = games.filter(g => g.gameNumber);
+  if(priceFilter !== null && !isNaN(priceFilter)){
+    gamesToCheck = gamesToCheck.filter(g => Math.abs(g.price - priceFilter) < 0.001);
+  }
+
+  if(gamesToCheck.length === 0){
+    if(!isAuto){
+      msg.className = 'err';
+      msg.textContent = (priceFilter !== null)
+        ? `No tracked games cost exactly $${priceFilter}.`
+        : 'No games loaded to check yet.';
+    }
     return;
   }
 
   // Clear any results from a previous search before starting a new one, so stale
-  // matches from a different city/chain don't linger on rows that no longer apply.
+  // matches from a different city/chain/price don't linger on rows that no longer apply.
   games.forEach(g => { g.storeLocations = null; });
   render();
 
   // Auto-runs on page load never carry fresh geolocation (that always needs your
   // explicit click, since browsers require a user gesture for the permission prompt),
   // so userCoords is naturally null here and this automatically takes the fast path.
-  const batches = chunk(games.map(g => ({gameNumber: g.gameNumber, name: g.name})).filter(g => g.gameNumber), 50);
+  const batches = chunk(gamesToCheck.map(g => ({gameNumber: g.gameNumber, name: g.name})), 50);
   msg.className = 'err';
   msg.textContent = (isAuto ? 'Auto-checking last search: ' : '') + (userCoords
-    ? `${games.length} games, sorting by real distance from you... this can take a minute or two.`
-    : `${games.length} games across ${batches.length} batch(es)... this takes about 5-10 seconds.`);
+    ? `${gamesToCheck.length}${priceSuffix} games, sorting by real distance from you... this can take a minute or two.`
+    : `${gamesToCheck.length}${priceSuffix} games across ${batches.length} batch(es)... this takes about 5-10 seconds.`);
 
   let allResults = [];
   try{
@@ -1013,7 +1031,7 @@ async function runStoreSearch(isAuto){
 
   if(allResults.length === 0){
     msg.className = 'err';
-    msg.textContent = `No matches for ${chainLabel} in ${city}.`;
+    msg.textContent = `No matches for ${chainLabel}${priceSuffix} in ${city}.`;
     return;
   }
 
@@ -1034,10 +1052,10 @@ async function runStoreSearch(isAuto){
 
   msg.className = 'err good';
   const totalLocations = allResults.reduce((sum, g) => sum + g.locations.length, 0);
-  msg.textContent = `${allResults.length} of ${games.length} games confirmed${chainSuffix} in ${city} (${totalLocations} location(s)) \u2014 shown under each ticket below.`;
+  msg.textContent = `${allResults.length} of ${gamesToCheck.length}${priceSuffix} games confirmed${chainSuffix} in ${city} (${totalLocations} location(s)) \u2014 shown under each ticket below.`;
   render();
 
-  try{ await storageAPI.set('scratcher_last_store_search', JSON.stringify({city, chain: chainName})); }
+  try{ await storageAPI.set('scratcher_last_store_search', JSON.stringify({city, chain: chainName, price: priceRaw})); }
   catch(e){ /* not critical */ }
 }
 
