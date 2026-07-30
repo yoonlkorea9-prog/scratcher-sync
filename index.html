@@ -875,6 +875,15 @@ function chunk(arr, size){
 
 let userZip = null; // set when geolocation succeeds
 let userCoords = null; // {lat, lng} -- only sent to the Worker if you use "Use my location"
+let detectedCity = null; // suggested city from geolocation -- only applied on explicit "Update" click
+
+function applyDetectedCity(){
+  if(!detectedCity) return;
+  document.getElementById('store-city').value = detectedCity;
+  const msg = document.getElementById('store-search-msg');
+  msg.className = 'err good';
+  msg.textContent = `City field updated to ${detectedCity}.`;
+}
 
 document.getElementById('use-location-btn').addEventListener('click', () => {
   const msg = document.getElementById('store-search-msg');
@@ -890,7 +899,8 @@ document.getElementById('use-location-btn').addEventListener('click', () => {
   navigator.geolocation.getCurrentPosition(
     async (position) => {
       const {latitude, longitude, accuracy} = position.coords;
-      userCoords = {lat: latitude, lng: longitude};
+      userCoords = {lat: latitude, lng: longitude}; // captured immediately -- used for distance-sorting
+                                                       // regardless of which city ends up in the search field
       msg.textContent = 'Location granted \u2014 looking up your city...';
       try{
         const res = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`);
@@ -899,12 +909,21 @@ document.getElementById('use-location-btn').addEventListener('click', () => {
         const city = (data.city || data.locality || '').toUpperCase();
         userZip = data.postcode || null;
         if(!city){ throw new Error('Could not determine city'); }
-        document.getElementById('store-city').value = city;
+        detectedCity = city;
+
+        const currentFieldValue = document.getElementById('store-city').value.trim();
         msg.className = 'err good';
         const accuracyNote = accuracy ? ` (accurate to ~${Math.round(accuracy)}m)` : '';
         const coordsShort = `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
         const verifyUrl = `https://www.google.com/maps?q=${latitude},${longitude}`;
-        msg.innerHTML = `Detected: ${escapeHtml(city)}${userZip ? ' ' + escapeHtml(userZip) : ''}${accuracyNote}. Coordinates: ${coordsShort} \u2014 <a href="${verifyUrl}" target="_blank" rel="noopener" style="color:var(--good);">verify on Maps</a>. Wrong city? Edit the City field above \u2014 it'll be remembered for next time.`;
+        const alreadyMatches = currentFieldValue === city;
+        msg.innerHTML = `Detected: ${escapeHtml(city)}${userZip ? ' ' + escapeHtml(userZip) : ''}${accuracyNote}. `
+          + `Coordinates: ${coordsShort} \u2014 <a href="${verifyUrl}" target="_blank" rel="noopener" style="color:var(--good);">verify on Maps</a>.<br>`
+          + (alreadyMatches
+              ? `City field already set to this.`
+              : `The City field above still says "${escapeHtml(currentFieldValue || '(blank)')}" \u2014 `
+                + `<button type="button" onclick="applyDetectedCity()" style="font-size:10px; padding:4px 10px; margin-left:2px;">Update to ${escapeHtml(city)}</button> `
+                + `if you want to search there, or leave it as-is to search ${escapeHtml(currentFieldValue || 'your typed city')} instead (distance-sorting still uses your real position either way).`);
       }catch(e){
         msg.className = 'err';
         msg.textContent = 'Got your location but couldn\u2019t determine the city name. Enter it manually.';
