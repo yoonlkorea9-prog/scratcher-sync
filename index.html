@@ -877,8 +877,8 @@ let userZip = null; // set when geolocation succeeds
 let userCoords = null; // {lat, lng} -- only sent to the Worker if you use "Use my location"
 let detectedCity = null; // suggested city from geolocation -- only applied on explicit "Update" click
 
-// Texas Lottery's form is backed by a fixed dropdown of city names, all upper-case
-// (e.g. "PROSPER"). Manual typing in normal case silently returns zero results since
+// Texas Lottery's form is backed by a fixed dropdown of city names, all upper-case.
+// Manual typing in normal case silently returns zero results since
 // their backend does an exact match -- auto-uppercase as-you-type fixes this at the source.
 document.getElementById('store-city').addEventListener('input', (e) => {
   const pos = e.target.selectionStart;
