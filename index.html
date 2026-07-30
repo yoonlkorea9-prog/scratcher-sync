@@ -277,8 +277,8 @@
         </div>
       </div>
       <div>
-        <label>Store chain</label>
-        <input id="store-chain" type="text" placeholder="7-ELEVEN">
+        <label>Store chain (optional \u2014 leave blank to see every store)</label>
+        <input id="store-chain" type="text" placeholder="7-ELEVEN, or leave blank">
       </div>
     </div>
     <div class="actions">
@@ -727,12 +727,13 @@ function storeLocationsHtml(g){
   return `
     <div style="margin: -4px 0 10px; padding: 10px 16px 10px 60px; border: 1px solid var(--line); border-top: none; border-radius: 0 0 4px 4px; background: rgba(216,168,78,0.04); clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 6px, 100% 100%, 0 100%);">
       <div style="font-size:9.5px; letter-spacing:0.08em; text-transform:uppercase; color: var(--gold-dim); margin-bottom:6px;">
-        Available at ${escapeHtml(chain)} near ${escapeHtml(city)}
+        ${chain ? `Available at ${escapeHtml(chain)} near ${escapeHtml(city)}` : `Available near ${escapeHtml(city)}`}
       </div>
       <div id="${boxId}" style="max-height: ${rowHeightEm * MAX_STORES_SHOWN}em; overflow-y: auto; transition: max-height 0.2s ease;">
         ${locations.map(loc => `
           <div style="font-size:11.5px; margin:3px 0;">
             <a href="${loc.mapsUrl}" target="_blank" rel="noopener" style="color:var(--good);">${escapeHtml(loc.name)} \u2014 ${escapeHtml(loc.address)}, ${escapeHtml(loc.city)}</a>
+            ${(loc.distanceMiles !== null && loc.distanceMiles !== undefined) ? `<span class="badge">${loc.distanceMiles.toFixed(1)} mi</span>` : ((g.storeLocations.userZip && loc.zip === g.storeLocations.userZip) ? '<span class="badge" style="margin-left:6px;">Your ZIP</span>' : '')}
           </div>
         `).join('')}
       </div>
@@ -860,6 +861,9 @@ function chunk(arr, size){
   return out;
 }
 
+let userZip = null; // set when geolocation succeeds
+let userCoords = null; // {lat, lng} -- only sent to the Worker if you use "Use my location"
+
 document.getElementById('use-location-btn').addEventListener('click', () => {
   const msg = document.getElementById('store-search-msg');
   if(!navigator.geolocation){
@@ -874,16 +878,18 @@ document.getElementById('use-location-btn').addEventListener('click', () => {
   navigator.geolocation.getCurrentPosition(
     async (position) => {
       const {latitude, longitude} = position.coords;
+      userCoords = {lat: latitude, lng: longitude};
       msg.textContent = 'Location granted \u2014 looking up your city...';
       try{
         const res = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`);
         if(!res.ok) throw new Error('Lookup failed');
         const data = await res.json();
         const city = (data.city || data.locality || '').toUpperCase();
+        userZip = data.postcode || null;
         if(!city){ throw new Error('Could not determine city'); }
         document.getElementById('store-city').value = city;
         msg.className = 'err good';
-        msg.textContent = `Detected: ${city}. Click "Search all tracked games" to continue.`;
+        msg.textContent = `Detected: ${city}${userZip ? ' (' + userZip + ')' : ''}. Search will sort by real distance from you.`;
       }catch(e){
         msg.className = 'err';
         msg.textContent = 'Got your location but couldn\u2019t determine the city name. Enter it manually.';
@@ -891,6 +897,7 @@ document.getElementById('use-location-btn').addEventListener('click', () => {
     },
     (error) => {
       msg.className = 'err';
+      userCoords = null;
       if(error.code === error.PERMISSION_DENIED){
         msg.textContent = 'Location permission denied. Enter your city manually instead.';
       }else{
@@ -906,7 +913,9 @@ document.getElementById('store-search-btn').addEventListener('click', async () =
   const city = document.getElementById('store-city').value.trim();
   const chainName = document.getElementById('store-chain').value.trim();
 
-  if(!city || !chainName){ msg.className = 'err'; msg.textContent = 'Enter both a city and a chain name.'; return; }
+  if(!city){ msg.className = 'err'; msg.textContent = 'Enter a city.'; return; }
+  const chainLabel = chainName ? `"${chainName}"` : 'any store';
+  const chainSuffix = chainName ? ` at "${chainName}"` : '';
 
   let workerUrl = DEFAULT_WORKER_URL;
   try{
@@ -927,16 +936,22 @@ document.getElementById('store-search-btn').addEventListener('click', async () =
 
   const batches = chunk(games.map(g => ({gameNumber: g.gameNumber, name: g.name})).filter(g => g.gameNumber), 50);
   msg.className = 'err';
-  msg.textContent = `Checking ${games.length} games across ${batches.length} batch(es)... this takes about 5-10 seconds.`;
+  msg.textContent = userCoords
+    ? `Checking ${games.length} games and sorting by real distance from you... this can take a minute or two.`
+    : `Checking ${games.length} games across ${batches.length} batch(es)... this takes about 5-10 seconds.`;
 
   let allResults = [];
   try{
     for(let i = 0; i < batches.length; i++){
-      msg.textContent = `Checking batch ${i+1} of ${batches.length}...`;
+      msg.textContent = (userCoords
+        ? `Batch ${i+1} of ${batches.length}: checking games, then geocoding store locations for distance...`
+        : `Checking batch ${i+1} of ${batches.length}...`);
+      const requestBody = {city, chain: chainName, games: batches[i]};
+      if(userCoords){ requestBody.userLat = userCoords.lat; requestBody.userLng = userCoords.lng; }
       const res = await fetch(workerUrl, {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({city, chain: chainName, games: batches[i]})
+        body: JSON.stringify(requestBody)
       });
       if(!res.ok){
         const errBody = await res.json().catch(() => ({}));
@@ -953,20 +968,28 @@ document.getElementById('store-search-btn').addEventListener('click', async () =
 
   if(allResults.length === 0){
     msg.className = 'err';
-    msg.textContent = `No matches for "${chainName}" in ${city}.`;
+    msg.textContent = `No matches for ${chainLabel} in ${city}.`;
     return;
   }
 
   // Attach results directly onto their matching games so they render inline,
   // underneath each ticket in the main list, rather than in a separate block.
+  // If the Worker computed real distances (userCoords was sent), locations already
+  // arrive sorted closest-first. Otherwise, fall back to sorting same-ZIP stores first.
   allResults.forEach(result => {
     const g = games.find(x => x.gameNumber === result.gameNumber);
-    if(g) g.storeLocations = { chain: chainName, city, locations: result.locations };
+    if(!g) return;
+    let locs = result.locations;
+    const hasDistances = locs.some(l => l.distanceMiles !== null && l.distanceMiles !== undefined);
+    if(!hasDistances && userZip){
+      locs = [...locs].sort((a, b) => (b.zip === userZip) - (a.zip === userZip));
+    }
+    g.storeLocations = { chain: chainName, city, locations: locs, userZip, hasDistances };
   });
 
   msg.className = 'err good';
   const totalLocations = allResults.reduce((sum, g) => sum + g.locations.length, 0);
-  msg.textContent = `${allResults.length} of ${games.length} games confirmed at "${chainName}" in ${city} (${totalLocations} location(s)) \u2014 shown under each ticket below.`;
+  msg.textContent = `${allResults.length} of ${games.length} games confirmed${chainSuffix} in ${city} (${totalLocations} location(s)) \u2014 shown under each ticket below.`;
   render();
 });
 
