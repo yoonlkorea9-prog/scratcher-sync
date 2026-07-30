@@ -902,7 +902,9 @@ document.getElementById('use-location-btn').addEventListener('click', () => {
         document.getElementById('store-city').value = city;
         msg.className = 'err good';
         const accuracyNote = accuracy ? ` (accurate to ~${Math.round(accuracy)}m)` : '';
-        msg.textContent = `Detected: ${city}${userZip ? ' ' + userZip : ''}${accuracyNote}. Not right? Just edit the City field manually below.`;
+        const coordsShort = `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
+        const verifyUrl = `https://www.google.com/maps?q=${latitude},${longitude}`;
+        msg.innerHTML = `Detected: ${escapeHtml(city)}${userZip ? ' ' + escapeHtml(userZip) : ''}${accuracyNote}. Coordinates: ${coordsShort} \u2014 <a href="${verifyUrl}" target="_blank" rel="noopener" style="color:var(--good);">verify on Maps</a>. Wrong city? Edit the field below \u2014 it'll be remembered.`;
       }catch(e){
         msg.className = 'err';
         msg.textContent = 'Got your location but couldn\u2019t determine the city name. Enter it manually.';
